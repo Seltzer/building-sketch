@@ -5,6 +5,7 @@
 #include "Types.h"
 
 #include "Clip.h"
+#include "Concave.h"
 
 struct Stroke
 {
@@ -75,18 +76,36 @@ void DrawStroke(const Stroke& stroke)
 
 typedef std::vector<float3> Poly;
 
+float randFloat()
+{
+	return rand() / float(RAND_MAX);
+}
+
+void RandomColor()
+{
+	glColor3f(randFloat(), randFloat(), randFloat());
+}
+
 void DrawOutline(const Poly poly)
 {
-	/*glColor3f(0.5f, 0.5f, 0.5f);
+	glColor3f(0.5f, 0.5f, 0.5f);
+	/*RandomColor();
 	glBegin(GL_POLYGON); // Draw raw stroke as line strip
 		for (std::vector<float3>::const_iterator v = poly.begin(); v != poly.end(); v++)
 			glVertex3f(v->x, -v->y, v->z);
 	glEnd();*/
-	glBegin(GL_LINE_LOOP); // Draw raw stroke as line strip
+	glDisable(GL_CULL_FACE);
+	tesselator.Begin_Polygon();
+	tesselator.Render_Contour(poly);
+	tesselator.End_Polygon();
+
+	glColor3f(1.0f, 0.0f, 0.0f);
+	//RandomColor();
+	glBegin(GL_LINE_LOOP); // Draw raw stroke as line loop
 		for (std::vector<float3>::const_iterator v = poly.begin(); v != poly.end(); v++)
 		{
-			glColor3f(1.0f, (v - poly.begin()) / (poly.size() - 1), 0.0f);
-			glVertex3f(v->x, -v->y, v->z);
+			//glColor3f(1.0f, (v - poly.begin()) / (poly.size() - 1), 0.0f);
+			glVertex3f(v->x, v->y, v->z);
 		}
 	glEnd();
 }
@@ -136,30 +155,37 @@ public:
 			int yMax = std::max(previous.y, current.y);
 			int yMin = std::min(previous.y, current.y);
 
-			assert(yMin != yMax); // TODO: Handle special case
+			//assert(yMin != yMax); // TODO: Handle special case
 
-			std::vector<float2> poly2d = Clip(outline, yMin, yMax);
+			std::vector< std::vector<float2> > polys2d = Clip(outline, yMin, yMax);
 
-			std::vector<float3> polyFront;
-			polyFront.reserve(poly2d.size());
-			std::vector<float3> polySide;
-			polySide.reserve(poly2d.size());
-			for (unsigned j = 0; j < poly2d.size(); j++)
+			for (unsigned p = 0; p < polys2d.size(); p++)
 			{
-				float2 p2d = poly2d[j];
-				// Interpolate based on y coordinate
-				float z = previous.x + float(p2d.y - previous.y) / (current.y - previous.y) * (current.x - previous.x);
-				polyFront.push_back(float3(p2d.x, p2d.y, z));
-				polySide.push_back(float3(z, p2d.y, p2d.x));
+				const std::vector<float2>& poly2d = polys2d[p];
+
+				std::vector<float3> polyFront;
+				polyFront.reserve(poly2d.size());
+				std::vector<float3> polySide;
+				polySide.reserve(poly2d.size());
+				for (unsigned j = 0; j < poly2d.size(); j++)
+				{
+					float2 p2d = poly2d[j];
+					// Interpolate based on y coordinate
+					float z = previous.x + float(p2d.y - previous.y) / (current.y - previous.y) * (current.x - previous.x);
+					polyFront.push_back(float3(p2d.x, -p2d.y, z));
+					polySide.push_back(float3(z, -p2d.y, p2d.x));
+				}
+				building.polys.push_back(polyFront);
+				building.polys.push_back(polySide);
 			}
-			building.polys.push_back(polyFront);
-			building.polys.push_back(polySide);
 
 			previous = current;
 		}
 	}
 	void Process(const Stroke& stroke)
 	{
+		strokes.clear();
+		polyLines.clear();
 		strokes.push_back(currentStroke); // Record unprocessed stroke
 		Stroke reduced = Reduce(stroke, 100.0f);
 		polyLines.push_back(reduced);
@@ -218,6 +244,9 @@ public:
 		glRotatef(pitch, 1, 0, 0);
 		glRotatef(yaw, 0, 1, 0);
 
+		//glTranslatef(win->GetWidth()/4, -(win->GetHeight()/2), win->GetWidth()/4);
+
+		
 		glColor3f(0,1, 0);
 		for (std::vector<Poly>::iterator p = building.polys.begin(); p != building.polys.end(); p++)
 		{
