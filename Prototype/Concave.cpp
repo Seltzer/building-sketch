@@ -1,4 +1,3 @@
-
 #include "Concave.h"
 
 #include <iostream>
