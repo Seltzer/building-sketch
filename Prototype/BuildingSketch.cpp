@@ -20,8 +20,29 @@ void BuildingSketch::UpdateBuilding()
 	building.polys.clear();
 	std::vector<int2> outline = polyLines.back().points;
 
-	if (extrude) {		
-		// Create simple extruded building
+	// Calculate the bounds of the building
+	int2 minCoords = int2(outline[0].x,outline[0].y);
+	int2 maxCoords = int2(outline[0].x,outline[0].y);
+	for (unsigned i = 0; i < outline.size(); i++)
+	{
+		minCoords.x = (minCoords.x < outline[i].x) ? minCoords.x : outline[i].x;
+		minCoords.y = (minCoords.y < outline[i].y) ? minCoords.y : outline[i].y;
+		maxCoords.x = (maxCoords.x > outline[i].x) ? maxCoords.x : outline[i].x;
+		maxCoords.y = (maxCoords.y > outline[i].y) ? maxCoords.y : outline[i].y;
+	}
+	int z_bounds = (extrude) ? 0 : abs(maxCoords.x - minCoords.x);
+	building.bounds = int3(abs(maxCoords.x - minCoords.x), abs(maxCoords.y - minCoords.y), z_bounds);
+	// Move the building's center to the origin.
+	int x_dif = outline[0].x;
+	int y_dif = outline[0].y;
+	for (unsigned i = 0; i < outline.size(); i++)
+	{
+		outline[i].x -= x_dif + (building.bounds.x/2);
+		outline[i].y -= y_dif - (building.bounds.y/2);
+	}
+
+
+	if (extrude) {		// Algorithm to create a simple extruded building
 		std::vector<float3> polyFront;
 		polyFront.reserve(outline.size());
 		std::vector<float3> polyBack;
@@ -29,33 +50,33 @@ void BuildingSketch::UpdateBuilding()
 		std::vector<float3> polySide;
 		polySide.reserve(4);
 
+		// The depth is 80% of the building base.
 		int depth = 0.8*abs(outline[0].x - outline[outline.size()-1].x);
-		int2 previous = outline[0];
 
+		int2 previous = outline[0];
 		for (unsigned i = 0; i < outline.size(); i++)
 		{
 			int2 current = outline[i];
-			polyFront.push_back(float3(current.x, current.y, 0));
-			polyBack.push_back(float3(current.x, current.y, depth));
+			polyFront.push_back(float3(current.x, -current.y, -depth/2));
+			polyBack.push_back(float3(current.x, -current.y, depth/2));
 
 			if (i > 0) {
 				polySide.clear();
-				polySide.push_back(float3(current.x, current.y, 0));
-				polySide.push_back(float3(current.x, current.y, depth));
-				polySide.push_back(float3(previous.x, previous.y, depth));
-				polySide.push_back(float3(previous.x, previous.y, 0));
+				polySide.push_back(float3(current.x, -current.y, -depth/2));
+				polySide.push_back(float3(current.x, -current.y, depth/2));
+				polySide.push_back(float3(previous.x, -previous.y, depth/2));
+				polySide.push_back(float3(previous.x, -previous.y, -depth/2));
 				building.polys.push_back(polySide);
 			}
 			previous = current;
 		}
-
 		building.polys.push_back(polyFront);
 		building.polys.push_back(polyBack);
+		building.bounds.z = depth;
 	}
-	else 
+	else 	// David's algorith (ALGO_MAGICDOTDOTDOT2010 ©) to create mirrored building
 	{
 		// Magic... TODO: Proper comments
-		// David's algorith to create mirrored building
 		int2 previous = outline[0];
 		for (unsigned i = 1; i < outline.size(); i++)
 		{
@@ -346,15 +367,15 @@ void BuildingSketch::RenderLoop()
 		RenderLines();
 
 
-		glViewport(verticalDivision, 0, win->GetWidth() - verticalDivision, win->GetHeight());
+		glViewport(verticalDivision, 0, (win->GetWidth() - verticalDivision), win->GetHeight());
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		gluPerspective(45 + zoom, float(win->GetWidth()) / 2 / win->GetHeight(), 10.0f, 10000.0f);
+		gluPerspective(45 + zoom, (float(win->GetWidth())  - verticalDivision) / win->GetHeight(), 10.0f, 10000.0f);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 			
 		glEnable(GL_DEPTH_TEST);
-		glTranslatef(0, 400, -2000); // Move it to an appropriate position to view.
+		glTranslatef(0, 0, -2000); // Move it to an appropriate position to view.
 
 		RenderBuilding();
 		glDisable(GL_DEPTH_TEST);
@@ -460,5 +481,20 @@ void BuildingSketch::DrawOutline(const Poly poly)
 			//glColor3f(1.0f, (v - poly.begin()) / (poly.size() - 1), 0.0f);
 			glVertex3f(v->x, v->y, v->z);
 		}
+	glEnd();
+
+	
+	glBegin(GL_LINES); // Draw line
+		glColor3f(0.0f, 1.0f, 0.0f);  // green = x axis
+		glVertex3f(0, 0, 0);
+		glVertex3f(200, 0, 0);
+
+		glColor3f(1.0f, 1.0f, 1.0f); // white = y axis
+		glVertex3f(0, 0, 0);
+		glVertex3f(0, 200, 0);
+
+		glColor3f(0.0f, 0.0f, 1.0f); // blue = z axis
+		glVertex3f(0, 0, 0);
+		glVertex3f(0, 0, 200);
 	glEnd();
 }

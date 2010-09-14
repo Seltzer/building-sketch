@@ -12,6 +12,7 @@ class BuildingSketch
 {
 public:	
 	typedef std::vector<float3> Poly;
+	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};
 	struct Stroke
 	{
 		std::vector<int2> points;
@@ -25,7 +26,7 @@ public:
 
 	struct Building
 	{
-		//BoundingBox bounds;
+		int3 bounds;
 		std::vector<Poly> polys;
 	};
 	
@@ -56,21 +57,15 @@ private:
 
 	Building building;
 
-	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};
+	int2 windowSize;
+	int verticalDivision;
 
+	MOUSE_ACTION MouseAction;
 	bool filled;
 	bool extrude;
 	float yaw;
 	float pitch;
 	double zoom;
-	MOUSE_ACTION MouseAction;
-
-	GLfloat tempMatrix[4][4];
-
-	int2 windowSize;
-	int verticalDivision;
-
-	
 	float rot_angle;
 	float3 rotAxis;
 	float3 lastPoint;
