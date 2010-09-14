@@ -1,6 +1,19 @@
 #include "BuildingSketch.h"
+#include <iostream>
+static GLfloat trackballMatrix[4][4] = {
+	{1.0, 0.0, 0.0, 0.0},
+	{0.0, 1.0, 0.0, 0.0},
+	{0.0, 0.0, 1.0, 0.0},
+	{0.0, 0.0, 0.0, 1.0}
+};
 
-BuildingSketch::BuildingSketch() : filled(false), drawing(false), yaw(0), pitch(0) {}
+BuildingSketch::BuildingSketch() : filled(false), yaw(0), pitch(0), zoom(0) 
+{
+	MouseAction = NONE;
+	windowSize = int2(800, 600);
+	verticalDivision = windowSize.x/2;
+}
+
 void BuildingSketch::UpdateBuilding()
 {
 	// TODO: Consider more than the most recent stroke
@@ -43,6 +56,7 @@ void BuildingSketch::UpdateBuilding()
 		previous = current;
 	}
 }
+
 void BuildingSketch::Process(const Stroke& stroke)
 {
 	strokes.clear();
@@ -51,29 +65,133 @@ void BuildingSketch::Process(const Stroke& stroke)
 	Stroke reduced = Reduce(stroke, 100.0f);
 	polyLines.push_back(reduced);
 }
-void BuildingSketch::MousePressed()
-{
-	drawing = true;
-}
-void BuildingSketch::MouseReleased()
-{
-	if (drawing) // If we just stopped drawing
-	{
-		drawing = false;
-		if (currentStroke.points.size() >=2) // We don't care about dots
-		{
-			Process(currentStroke); // Process
-			UpdateBuilding();
-		}
 
-		currentStroke = Stroke(); // Reset stroke for next drawing
+void BuildingSketch::MousePressed(int2 pos)
+{
+	if (pos.y < verticalDivision) // Mouse pressed on the left side.
+	{
+		MouseAction = DRAWING;
+	}
+	else // Mouse pressed on the right side.
+	{
+		MouseAction = TRACKING;
+		// Map the mouse position to a logical sphere location.
+		// Keep it in the class variable lastPoint.
+		lastPoint = trackBallMapping( pos );
 	}
 }
+
+void BuildingSketch::MouseReleased(int2 pos)
+{	
+	switch (MouseAction) 
+	{
+		case DRAWING:
+		{
+			// If we just stopped drawing
+			MouseAction = NONE;
+			if (currentStroke.points.size() >=2) // We don't care about dots
+			{
+				Process(currentStroke); // Process
+				UpdateBuilding();
+			}
+			currentStroke = Stroke(); // Reset stroke for next drawing
+			break;
+		}
+		case TRACKING:
+		{
+			MouseAction = NONE;
+			break;
+		}
+	}
+}
+
 void BuildingSketch::MouseMoved(int2 pos)
 {
-	if (drawing) // If we are drawing
-		currentStroke.points.push_back(pos); // Record movements
+	float3 curPoint;
+	switch (MouseAction) 
+	{
+		case DRAWING:
+		{
+			// If we are drawing record movements.
+			currentStroke.points.push_back(pos);
+			break;
+		}
+		case TRACKING:
+		{
+			float m_ROTSCALE = 10.0f;
+			float3 direction;
+			GLfloat tempMatrix[4][4] = {
+				{1.0, 0.0, 0.0, 0.0},
+				{0.0, 1.0, 0.0, 0.0},
+				{0.0, 0.0, 1.0, 0.0},
+				{0.0, 0.0, 0.0, 1.0}
+			};
+
+			curPoint = trackBallMapping( pos );  // Map the mouse position to a logical sphere location.
+			direction = curPoint - lastPoint;
+			float velocity = direction.length();
+			if( velocity > 0.0001 ) // If little movement - do nothing.
+			{				
+				// Rotate about the axis that is perpendicular to the great circle 
+				// connecting the mouse movements.
+				rotAxis;
+				rotAxis = cross( lastPoint, curPoint );
+				rot_angle = velocity * m_ROTSCALE;
+
+				// We need to apply the rotation as the last transformation.
+				// 1. Get the current matrix and save it.
+				// 2. Set the matrix to the identity matrix (clear it).
+				// 3. Apply the trackball rotation.
+				// 4. Pre-multiply it by the saved matrix.
+				glGetFloatv( GL_MODELVIEW_MATRIX, (GLfloat *) trackballMatrix );
+				glLoadIdentity();
+				glRotatef( rot_angle, rotAxis.x, rotAxis.y, rotAxis.z );
+				glMultMatrixf( (GLfloat *) trackballMatrix );				
+			}
+			// If we want to see it, we need to force the system to redraw the scene.
+			//Invalidate( TRUE );
+
+			// Save the location of the current point for the next movement.
+			break;
+		}
+		lastPoint = curPoint;
+	}		
 }
+
+void BuildingSketch::MouseWheelMoved(int delta)
+{
+	double ZOOM_SCALE = 5.0;
+	if (delta < 0)
+	{
+		// Zoom in
+		zoom = zoom + ZOOM_SCALE;
+		zoom = (zoom>30.0) ? 30.0: zoom;
+	}
+	else if (delta > 0)
+	{
+		// Zoom out
+		zoom = zoom - ZOOM_SCALE;
+		zoom = (zoom<-30.0) ? -30.0: zoom;
+	} 
+}
+
+// Treat the mouse position as the projection of a point on the hemi-sphere
+// down to the image plane (along the z-axis), and determine that point on
+// the hemi-sphere.
+float3 BuildingSketch::trackBallMapping(float2 point)
+{
+    double3 v;
+    double d;
+    v.x = (2.0*(point.x - verticalDivision) - windowSize.x) / windowSize.x;
+	v.y = ((windowSize.y - verticalDivision) - 2.0*(point.y - verticalDivision)) / (windowSize.y - verticalDivision);
+    v.z = 0.0;
+    d = v.length();
+    d = (d<1.0) ? d : 1.0;
+    v.z = sqrt(1.001 - d*d);
+    v.normalise(); // Still need to normalize, since we only capped d, not v.
+    return v;
+}
+
 void BuildingSketch::RenderLines()
 {
 	// Draw background
@@ -100,6 +218,7 @@ void BuildingSketch::RenderLines()
 		DrawStroke(*s);
 	}
 }
+
 void BuildingSketch::RenderBuilding()
 {
 	glRotatef(pitch, 1, 0, 0);
@@ -118,9 +237,10 @@ void BuildingSketch::RenderBuilding()
 	glVertex3f(v->x, -v->y, 0);
 	glEnd();*/
 }
+
 void BuildingSketch::RenderLoop()
 {
-	win = new sf::RenderWindow(sf::VideoMode(800, 600, 32), "Building Sketch");
+	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), "Building Sketch");
 	win->SetActive(true);
 	win->PreserveOpenGLStates(true);
 
@@ -155,40 +275,46 @@ void BuildingSketch::RenderLoop()
 					pitch += 5; // TODO: Time based
 				else if (Event.Key.Code == sf::Key::Down)
 					pitch -= 5;
+				else if (Event.Key.Code == sf::Key::W)
+					filled = !filled;
 			}
 
 			if (Event.Type == sf::Event::MouseMoved)
 				MouseMoved(int2(Event.MouseMove.X, Event.MouseMove.Y));
 			if (Event.Type == sf::Event::MouseButtonPressed && Event.MouseButton.Button == sf::Mouse::Left)
-				MousePressed();
+				MousePressed(int2(Event.MouseMove.X, Event.MouseMove.Y));
 			if (Event.Type == sf::Event::MouseButtonReleased && Event.MouseButton.Button == sf::Mouse::Left)
-				MouseReleased();
+				MouseReleased(int2(Event.MouseMove.X, Event.MouseMove.Y));
+			if (Event.Type == sf::Event::MouseWheelMoved)
+				MouseWheelMoved(Event.MouseWheel.Delta);
 		}
 
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glViewport(0, 0, win->GetWidth()/2, win->GetHeight());
+		glViewport(0, 0, verticalDivision, win->GetHeight());
+		
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		glOrtho(0, win->GetWidth()/2, win->GetHeight(), 0, -100, 100);
+		glOrtho(0, verticalDivision, win->GetHeight(), 0, -100, 100);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 
 		RenderLines();
 
-		glViewport(win->GetWidth()/2, 0, win->GetWidth()/2, win->GetHeight());
+		glViewport(verticalDivision, 0, win->GetWidth() - verticalDivision, win->GetHeight());
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		gluPerspective(45, float(win->GetWidth()) / 2 / win->GetHeight(), 10.0f, 10000.0f);
+		gluPerspective(45 + zoom, float(win->GetWidth()) / 2 / win->GetHeight(), 10.0f, 10000.0f);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-
+			
 		glEnable(GL_DEPTH_TEST);
 
+		glMultMatrixf( (GLfloat *) trackballMatrix );
 		glTranslatef(0, 400, -2000); // Move it to an appropriate position to view.
-		RenderBuilding();
 
+		RenderBuilding();
 		glDisable(GL_DEPTH_TEST);
 
 		win->Display();
@@ -258,6 +384,7 @@ void BuildingSketch::DrawStroke(const Stroke& stroke)
 			glVertex2iv(v->data);
 	glEnd();
 }
+
 float BuildingSketch::randFloat()
 {
 	return rand() / float(RAND_MAX);
@@ -277,11 +404,11 @@ void BuildingSketch::DrawOutline(const Poly poly)
 			glVertex3f(v->x, -v->y, v->z);
 	glEnd();*/
 	glDisable(GL_CULL_FACE);
-//	if (filled) {
+	if (filled) {
 		tesselator.Begin_Polygon();
 		tesselator.Render_Contour(poly);
 		tesselator.End_Polygon();
-	//}
+	}
 
 	glColor3f(1.0f, 0.0f, 0.0f);
 	//RandomColor();
@@ -293,6 +420,3 @@ void BuildingSketch::DrawOutline(const Poly poly)
 		}
 	glEnd();
 }
-
-
-

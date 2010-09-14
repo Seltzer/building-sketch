@@ -38,9 +38,11 @@ public:
 	void DrawOutline(const Poly poly);
 	void UpdateBuilding();
 	void Process(const Stroke& stroke);
-	void MousePressed();
-	void MouseReleased();
+	void MousePressed(int2 pos);
+	void MouseReleased(int2 pos);
 	void MouseMoved(int2 pos);
+	void MouseWheelMoved(int delta);
+	float3 trackBallMapping(float2 point);
 	void RenderLines();
 	void RenderBuilding();
 	void RenderLoop();	
@@ -54,10 +56,23 @@ private:
 
 	Building building;
 
+	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};
+
 	bool filled;
-	bool drawing;
 	float yaw;
 	float pitch;
+	double zoom;
+	MOUSE_ACTION MouseAction;
+
+	GLfloat tempMatrix[4][4];
+
+	int2 windowSize;
+	int verticalDivision;
+
+	
+	float rot_angle;
+	float3 rotAxis;
+	float3 lastPoint;
 };
 
 #endif //BUILDINGSKETCH_H
