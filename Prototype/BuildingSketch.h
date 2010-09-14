@@ -63,6 +63,7 @@ private:
 	MOUSE_ACTION MouseAction;
 	bool filled;
 	bool extrude;
+	bool showAxis;
 	float yaw;
 	float pitch;
 	double zoom;

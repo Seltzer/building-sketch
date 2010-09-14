@@ -7,7 +7,7 @@ const GLfloat trackballMatrix[4][4] = {
 				{0.0, 0.0, 0.0, 1.0}
 			};
 
-BuildingSketch::BuildingSketch() : filled(false), yaw(0), pitch(0), zoom(0), extrude(false) 
+BuildingSketch::BuildingSketch() : filled(false), yaw(0), pitch(0), zoom(0), extrude(false), showAxis(true) 
 {
 	MouseAction = NONE;
 	windowSize = int2(800, 600);
@@ -33,12 +33,12 @@ void BuildingSketch::UpdateBuilding()
 	int z_bounds = (extrude) ? 0 : abs(maxCoords.x - minCoords.x);
 	building.bounds = int3(abs(maxCoords.x - minCoords.x), abs(maxCoords.y - minCoords.y), z_bounds);
 	// Move the building's center to the origin.
-	int x_dif = outline[0].x;
-	int y_dif = outline[0].y;
+	int x_dif = minCoords.x;
+	int y_dif = minCoords.y;
 	for (unsigned i = 0; i < outline.size(); i++)
 	{
 		outline[i].x -= x_dif + (building.bounds.x/2);
-		outline[i].y -= y_dif - (building.bounds.y/2);
+		outline[i].y -= y_dif + (building.bounds.y/2);
 	}
 
 
@@ -291,6 +291,23 @@ void BuildingSketch::RenderBuilding()
 	{
 		DrawOutline(*p);
 	}
+
+	// Draw axis
+	if (showAxis) {
+		glBegin(GL_LINES); // Draw line
+			glColor3f(0.0f, 1.0f, 0.0f);  // green = x axis
+			glVertex3f(0, 0, 0);
+			glVertex3f(200, 0, 0);
+
+			glColor3f(1.0f, 1.0f, 1.0f); // white = y axis
+			glVertex3f(0, 0, 0);
+			glVertex3f(0, 200, 0);
+
+			glColor3f(0.0f, 0.0f, 1.0f); // blue = z axis
+			glVertex3f(0, 0, 0);
+			glVertex3f(0, 0, 200);
+		glEnd();
+	}
 	/*glBegin(GL_LINE_STRIP); // Draw raw stroke as line strip
 	for (std::vector<float2>::const_iterator v = clipped.begin(); v != clipped.end(); v++)
 	glVertex3f(v->x, -v->y, 0);
@@ -338,6 +355,8 @@ void BuildingSketch::RenderLoop()
 					pitch -= 5;
 				else if (Event.Key.Code == sf::Key::W)
 					filled = !filled;
+				else if (Event.Key.Code == sf::Key::A)
+					showAxis = !showAxis;
 				else if (Event.Key.Code == sf::Key::E) {
 					extrude = !extrude;
 					UpdateBuilding();
@@ -375,7 +394,7 @@ void BuildingSketch::RenderLoop()
 		glLoadIdentity();
 			
 		glEnable(GL_DEPTH_TEST);
-		glTranslatef(0, 0, -2000); // Move it to an appropriate position to view.
+		glTranslatef(0, 0, -1000); // Move it to an appropriate position to view.
 
 		RenderBuilding();
 		glDisable(GL_DEPTH_TEST);
@@ -480,21 +499,7 @@ void BuildingSketch::DrawOutline(const Poly poly)
 		{
 			//glColor3f(1.0f, (v - poly.begin()) / (poly.size() - 1), 0.0f);
 			glVertex3f(v->x, v->y, v->z);
+			
 		}
-	glEnd();
-
-	
-	glBegin(GL_LINES); // Draw line
-		glColor3f(0.0f, 1.0f, 0.0f);  // green = x axis
-		glVertex3f(0, 0, 0);
-		glVertex3f(200, 0, 0);
-
-		glColor3f(1.0f, 1.0f, 1.0f); // white = y axis
-		glVertex3f(0, 0, 0);
-		glVertex3f(0, 200, 0);
-
-		glColor3f(0.0f, 0.0f, 1.0f); // blue = z axis
-		glVertex3f(0, 0, 0);
-		glVertex3f(0, 0, 200);
 	glEnd();
 }
