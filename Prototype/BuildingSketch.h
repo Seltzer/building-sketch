@@ -59,6 +59,7 @@ private:
 	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};
 
 	bool filled;
+	bool extrude;
 	float yaw;
 	float pitch;
 	double zoom;

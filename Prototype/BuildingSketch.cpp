@@ -1,13 +1,13 @@
 #include "BuildingSketch.h"
 #include <iostream>
-static GLfloat trackballMatrix[4][4] = {
-	{1.0, 0.0, 0.0, 0.0},
-	{0.0, 1.0, 0.0, 0.0},
-	{0.0, 0.0, 1.0, 0.0},
-	{0.0, 0.0, 0.0, 1.0}
-};
+const GLfloat trackballMatrix[4][4] = {
+				{1.0, 0.0, 0.0, 0.0},
+				{0.0, 1.0, 0.0, 0.0},
+				{0.0, 0.0, 1.0, 0.0},
+				{0.0, 0.0, 0.0, 1.0}
+			};
 
-BuildingSketch::BuildingSketch() : filled(false), yaw(0), pitch(0), zoom(0) 
+BuildingSketch::BuildingSketch() : filled(false), yaw(0), pitch(0), zoom(0), extrude(false) 
 {
 	MouseAction = NONE;
 	windowSize = int2(800, 600);
@@ -20,40 +20,76 @@ void BuildingSketch::UpdateBuilding()
 	building.polys.clear();
 	std::vector<int2> outline = polyLines.back().points;
 
-	// Magic... TODO: Proper comments
-	int2 previous = outline[0];
-	for (unsigned i = 1; i < outline.size(); i++)
-	{
-		int2 current = outline[i];
+	if (extrude) {		
+		// Create simple extruded building
+		std::vector<float3> polyFront;
+		polyFront.reserve(outline.size());
+		std::vector<float3> polyBack;
+		polyBack.reserve(outline.size());
+		std::vector<float3> polySide;
+		polySide.reserve(4);
 
-		int yMax = std::max(previous.y, current.y);
-		int yMin = std::min(previous.y, current.y);
+		int depth = 0.8*abs(outline[0].x - outline[outline.size()-1].x);
+		int2 previous = outline[0];
 
-		//assert(yMin != yMax); // TODO: Handle special case
-
-		std::vector< std::vector<float2> > polys2d = Clip(outline, yMin, yMax);
-
-		for (unsigned p = 0; p < polys2d.size(); p++)
+		for (unsigned i = 0; i < outline.size(); i++)
 		{
-			const std::vector<float2>& poly2d = polys2d[p];
+			int2 current = outline[i];
+			polyFront.push_back(float3(current.x, current.y, 0));
+			polyBack.push_back(float3(current.x, current.y, depth));
 
-			std::vector<float3> polyFront;
-			polyFront.reserve(poly2d.size());
-			std::vector<float3> polySide;
-			polySide.reserve(poly2d.size());
-			for (unsigned j = 0; j < poly2d.size(); j++)
-			{
-				float2 p2d = poly2d[j];
-				// Interpolate based on y coordinate
-				float z = previous.x + float(p2d.y - previous.y) / (current.y - previous.y) * (current.x - previous.x);
-				polyFront.push_back(float3(p2d.x, -p2d.y, z));
-				polySide.push_back(float3(z, -p2d.y, p2d.x));
+			if (i > 0) {
+				polySide.clear();
+				polySide.push_back(float3(current.x, current.y, 0));
+				polySide.push_back(float3(current.x, current.y, depth));
+				polySide.push_back(float3(previous.x, previous.y, depth));
+				polySide.push_back(float3(previous.x, previous.y, 0));
+				building.polys.push_back(polySide);
 			}
-			building.polys.push_back(polyFront);
-			building.polys.push_back(polySide);
+			previous = current;
 		}
 
-		previous = current;
+		building.polys.push_back(polyFront);
+		building.polys.push_back(polyBack);
+	}
+	else 
+	{
+		// Magic... TODO: Proper comments
+		// David's algorith to create mirrored building
+		int2 previous = outline[0];
+		for (unsigned i = 1; i < outline.size(); i++)
+		{
+			int2 current = outline[i];
+
+			int yMax = std::max(previous.y, current.y);
+			int yMin = std::min(previous.y, current.y);
+
+			//assert(yMin != yMax); // TODO: Handle special case
+
+			std::vector< std::vector<float2> > polys2d = Clip(outline, yMin, yMax);
+
+			for (unsigned p = 0; p < polys2d.size(); p++)
+			{
+				const std::vector<float2>& poly2d = polys2d[p];
+
+				std::vector<float3> polyFront;
+				polyFront.reserve(poly2d.size());
+				std::vector<float3> polySide;
+				polySide.reserve(poly2d.size());
+				for (unsigned j = 0; j < poly2d.size(); j++)
+				{
+					float2 p2d = poly2d[j];
+					// Interpolate based on y coordinate
+					float z = previous.x + float(p2d.y - previous.y) / (current.y - previous.y) * (current.x - previous.x);
+					polyFront.push_back(float3(p2d.x, -p2d.y, z));
+					polySide.push_back(float3(z, -p2d.y, p2d.x));
+				}
+				building.polys.push_back(polyFront);
+				building.polys.push_back(polySide);
+			}
+
+			previous = current;
+		}
 	}
 }
 
@@ -143,10 +179,12 @@ void BuildingSketch::MouseMoved(int2 pos)
 				// 2. Set the matrix to the identity matrix (clear it).
 				// 3. Apply the trackball rotation.
 				// 4. Pre-multiply it by the saved matrix.
-				glGetFloatv( GL_MODELVIEW_MATRIX, (GLfloat *) trackballMatrix );
+				/*glGetFloatv( GL_MODELVIEW_MATRIX, (GLfloat *) tempMatrix );
+				
 				glLoadIdentity();
 				glRotatef( rot_angle, rotAxis.x, rotAxis.y, rotAxis.z );
-				glMultMatrixf( (GLfloat *) trackballMatrix );				
+				glMultMatrixf( (GLfloat *) trackballMatrix );		
+				glGetFloatv( GL_MODELVIEW_MATRIX, (GLfloat *) trackballMatrix );	*/	
 			}
 			// If we want to see it, we need to force the system to redraw the scene.
 			//Invalidate( TRUE );
@@ -255,6 +293,8 @@ void BuildingSketch::RenderLoop()
 				int width = Event.Size.Width;
 				int height = Event.Size.Height;
 				win->SetView(sf::View(sf::FloatRect(0, 0, (float) width, (float) height))); // Not needed?
+				windowSize = int2(width, height);
+				verticalDivision = width/2;
 			}
 
 			// Window closed
@@ -277,6 +317,10 @@ void BuildingSketch::RenderLoop()
 					pitch -= 5;
 				else if (Event.Key.Code == sf::Key::W)
 					filled = !filled;
+				else if (Event.Key.Code == sf::Key::E) {
+					extrude = !extrude;
+					UpdateBuilding();
+				}
 			}
 
 			if (Event.Type == sf::Event::MouseMoved)
@@ -299,8 +343,8 @@ void BuildingSketch::RenderLoop()
 		glOrtho(0, verticalDivision, win->GetHeight(), 0, -100, 100);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-
 		RenderLines();
+
 
 		glViewport(verticalDivision, 0, win->GetWidth() - verticalDivision, win->GetHeight());
 		glMatrixMode(GL_PROJECTION);
@@ -310,8 +354,6 @@ void BuildingSketch::RenderLoop()
 		glLoadIdentity();
 			
 		glEnable(GL_DEPTH_TEST);
-
-		glMultMatrixf( (GLfloat *) trackballMatrix );
 		glTranslatef(0, 400, -2000); // Move it to an appropriate position to view.
 
 		RenderBuilding();
