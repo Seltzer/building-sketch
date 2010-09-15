@@ -13,15 +13,11 @@ class BuildingSketch
 public:	
 	typedef std::vector<float3> Poly;
 	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};
+	enum BUILDING_ALGORITHM { EXTRUDE, ROTATE, MIRROR};
+
 	struct Stroke
 	{
 		std::vector<int2> points;
-	};
-
-	struct BoundingBox
-	{
-		int3 min;
-		int3 max;
 	};
 
 	struct Building
@@ -56,6 +52,8 @@ private:
 	std::vector<Stroke> polyLines;
 
 	Building building;
+	BUILDING_ALGORITHM buildingAlgorithm;
+	int rotationCount;
 
 	int2 windowSize;
 	int verticalDivision;
@@ -64,6 +62,7 @@ private:
 	bool filled;
 	bool extrude;
 	bool showAxis;
+	bool mirrorSketch;
 	float yaw;
 	float pitch;
 	double zoom;

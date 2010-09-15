@@ -1,7 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-const double D_PI = 3.14159265358979323846264; // How hard is it to find a pi constant around here?
+// How hard is it to find a pi constant around here?
+const double D_PI = 3.141592653589793238462643383279502884197169399375105820974944592;
 
 #define VEC_TOSTRING
 

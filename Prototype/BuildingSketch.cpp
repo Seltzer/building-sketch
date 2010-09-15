@@ -9,7 +9,10 @@ const GLfloat trackballMatrix[4][4] = {
 
 BuildingSketch::BuildingSketch() : filled(false), yaw(0), pitch(0), zoom(0), extrude(false), showAxis(true) 
 {
+	mirrorSketch = false;
 	MouseAction = NONE;
+	rotationCount = 1;
+	buildingAlgorithm = ROTATE;
 	windowSize = int2(800, 600);
 	verticalDivision = windowSize.x/2;
 }
@@ -41,75 +44,135 @@ void BuildingSketch::UpdateBuilding()
 		outline[i].y -= y_dif + (building.bounds.y/2);
 	}
 
-
-	if (extrude) {		// Algorithm to create a simple extruded building
-		std::vector<float3> polyFront;
-		polyFront.reserve(outline.size());
-		std::vector<float3> polyBack;
-		polyBack.reserve(outline.size());
-		std::vector<float3> polySide;
-		polySide.reserve(4);
-
-		// The depth is 80% of the building base.
-		int depth = 0.8*abs(outline[0].x - outline[outline.size()-1].x);
-
-		int2 previous = outline[0];
-		for (unsigned i = 0; i < outline.size(); i++)
-		{
-			int2 current = outline[i];
-			polyFront.push_back(float3(current.x, -current.y, -depth/2));
-			polyBack.push_back(float3(current.x, -current.y, depth/2));
-
-			if (i > 0) {
-				polySide.clear();
-				polySide.push_back(float3(current.x, -current.y, -depth/2));
-				polySide.push_back(float3(current.x, -current.y, depth/2));
-				polySide.push_back(float3(previous.x, -previous.y, depth/2));
-				polySide.push_back(float3(previous.x, -previous.y, -depth/2));
-				building.polys.push_back(polySide);
-			}
-			previous = current;
-		}
-		building.polys.push_back(polyFront);
-		building.polys.push_back(polyBack);
-		building.bounds.z = depth;
-	}
-	else 	// David's algorith (ALGO_MAGICDOTDOTDOT2010 ©) to create mirrored building
+	switch (buildingAlgorithm)
 	{
-		// Magic... TODO: Proper comments
-		int2 previous = outline[0];
-		for (unsigned i = 1; i < outline.size(); i++)
-		{
-			int2 current = outline[i];
+		case EXTRUDE:	// Algorithm to create an extruded building
+		{		
+			std::vector<float3> polyFront;
+			polyFront.reserve(outline.size());
+			std::vector<float3> polyBack;
+			polyBack.reserve(outline.size());
+			std::vector<float3> polySide;
+			polySide.reserve(4);
 
-			int yMax = std::max(previous.y, current.y);
-			int yMin = std::min(previous.y, current.y);
+			// The depth is 80% of the building base.
+			int depth = 0.8*abs(outline[0].x - outline[outline.size()-1].x);
 
-			//assert(yMin != yMax); // TODO: Handle special case
-
-			std::vector< std::vector<float2> > polys2d = Clip(outline, yMin, yMax);
-
-			for (unsigned p = 0; p < polys2d.size(); p++)
+			int2 previous = outline[0];
+			for (unsigned i = 0; i < outline.size(); i++)
 			{
-				const std::vector<float2>& poly2d = polys2d[p];
+				int2 current = outline[i];
+				polyFront.push_back(float3(current.x, -current.y, -depth/2));
+				polyBack.push_back(float3(current.x, -current.y, depth/2));
 
-				std::vector<float3> polyFront;
-				polyFront.reserve(poly2d.size());
-				std::vector<float3> polySide;
-				polySide.reserve(poly2d.size());
-				for (unsigned j = 0; j < poly2d.size(); j++)
-				{
-					float2 p2d = poly2d[j];
-					// Interpolate based on y coordinate
-					float z = previous.x + float(p2d.y - previous.y) / (current.y - previous.y) * (current.x - previous.x);
-					polyFront.push_back(float3(p2d.x, -p2d.y, z));
-					polySide.push_back(float3(z, -p2d.y, p2d.x));
+				if (i > 0) {
+					polySide.clear();
+					polySide.push_back(float3(current.x, -current.y, -depth/2));
+					polySide.push_back(float3(current.x, -current.y, depth/2));
+					polySide.push_back(float3(previous.x, -previous.y, depth/2));
+					polySide.push_back(float3(previous.x, -previous.y, -depth/2));
+					building.polys.push_back(polySide);
 				}
-				building.polys.push_back(polyFront);
-				building.polys.push_back(polySide);
+				previous = current;
+			}
+			building.polys.push_back(polyFront);
+			building.polys.push_back(polyBack);
+			building.bounds.z = depth;
+			break;
+		}
+		case ROTATE:	// Algorithm to create an rotated building
+		{
+			double rotAngle = (D_PI/rotationCount);
+			std::vector<float3> polySide;
+			polySide.reserve(4);
+
+			// Convert old 2D outline to a 3D outline.			
+			std::vector<int3> oldOutline;
+			oldOutline.reserve(outline.size());
+			for (unsigned i = 0; i < outline.size(); i++)
+			{
+				int3 point = int3(outline[i].x, outline[i].y, 0);
+				oldOutline.push_back(point);
 			}
 
-			previous = current;
+			// Mirror the sketch so everything lines up on a central axis
+			if (mirrorSketch) {
+				for (unsigned i = 0; i < oldOutline.size()/2; i++)
+				{
+					oldOutline[oldOutline.size()-1-i].x = -oldOutline[i].x;
+					oldOutline[oldOutline.size()-1-i].y = oldOutline[i].y;
+				}
+			}
+
+			for (int i = 0; i < rotationCount*2; i++)
+			{	
+				// rotate the old outline by rotAngle to get the new outline.
+				std::vector<int3> newOutline = oldOutline;
+				for (unsigned i = 0; i < newOutline.size(); i++)
+				{
+					double temp_x = newOutline[i].z*sin(rotAngle) + newOutline[i].x*cos(rotAngle);
+					double temp_z = newOutline[i].z*cos(rotAngle) - newOutline[i].x*sin(rotAngle);
+					newOutline[i].x = temp_x;
+					newOutline[i].z = temp_z;
+				}
+
+				// Build each side polygon
+				int3 prevPoint_oldOutline = oldOutline[0];
+				int3 prevPoint_newOutline = newOutline[0];
+				for (unsigned i = 1; i < newOutline.size(); i++)
+				{
+					int3 currentPoint_newOutline = newOutline[i];
+					int3 currentPoint_oldOutline = oldOutline[i];
+					polySide.clear();
+					polySide.push_back(float3(currentPoint_newOutline.x, -currentPoint_newOutline.y, currentPoint_newOutline.z));
+					polySide.push_back(float3(currentPoint_oldOutline.x, -currentPoint_oldOutline.y, currentPoint_oldOutline.z));					
+					polySide.push_back(float3(prevPoint_oldOutline.x, -prevPoint_oldOutline.y, prevPoint_oldOutline.z));
+					polySide.push_back(float3(prevPoint_newOutline.x, -prevPoint_newOutline.y, prevPoint_newOutline.z));
+					building.polys.push_back(polySide);
+
+					prevPoint_oldOutline = currentPoint_oldOutline;
+					prevPoint_newOutline = currentPoint_newOutline;
+				}
+				oldOutline = newOutline;
+			}			
+			break;
+		}
+		case MIRROR: 	// David's algorith (ALGO_MAGICDOTDOTDOT2010 ©) to create mirrored building
+		{
+			// Magic... TODO: Proper comments
+			int2 previous = outline[0];
+			for (unsigned i = 1; i < outline.size(); i++)
+			{
+				int2 current = outline[i];
+
+				int yMax = std::max(previous.y, current.y);
+				int yMin = std::min(previous.y, current.y);
+
+				//assert(yMin != yMax); // TODO: Handle special case
+
+				std::vector< std::vector<float2> > polys2d = Clip(outline, yMin, yMax);
+
+				for (unsigned p = 0; p < polys2d.size(); p++)
+				{
+					const std::vector<float2>& poly2d = polys2d[p];
+
+					std::vector<float3> polyFront;
+					polyFront.reserve(poly2d.size());
+					std::vector<float3> polySide;
+					polySide.reserve(poly2d.size());
+					for (unsigned j = 0; j < poly2d.size(); j++)
+					{
+						float2 p2d = poly2d[j];
+						// Interpolate based on y coordinate
+						float z = previous.x + float(p2d.y - previous.y) / (current.y - previous.y) * (current.x - previous.x);
+						polyFront.push_back(float3(p2d.x, -p2d.y, z));
+						polySide.push_back(float3(z, -p2d.y, p2d.x));
+					}
+					building.polys.push_back(polyFront);
+					building.polys.push_back(polySide);
+				}
+				previous = current;
+			}
 		}
 	}
 }
@@ -353,12 +416,51 @@ void BuildingSketch::RenderLoop()
 					pitch += 5; // TODO: Time based
 				else if (Event.Key.Code == sf::Key::Down)
 					pitch -= 5;
+				// Toggle wireframe fill on and off.
 				else if (Event.Key.Code == sf::Key::W)
 					filled = !filled;
+				// Toggle axis on and off.
 				else if (Event.Key.Code == sf::Key::A)
 					showAxis = !showAxis;
-				else if (Event.Key.Code == sf::Key::E) {
-					extrude = !extrude;
+				// Toggle mirror sketch in rotated algorithm.
+				else if (Event.Key.Code == sf::Key::M)
+				{				
+					mirrorSketch = !mirrorSketch;
+					UpdateBuilding();
+				}
+				// Increase the rations count for the rotation algorith.
+				else if (Event.Key.Code == sf::Key::Comma)
+				{
+					rotationCount--;
+					rotationCount = (rotationCount<1) ? 1 : rotationCount;
+					UpdateBuilding();
+				}
+				// Decrease the rations count for the rotation algorith.
+				else if (Event.Key.Code == sf::Key::Period)
+				{
+					rotationCount++;
+					UpdateBuilding();
+				}
+				// Toggle differnt building render algorithms
+				else if (Event.Key.Code == sf::Key::E) {	
+					switch (buildingAlgorithm) 
+					{
+						case EXTRUDE:
+						{
+							buildingAlgorithm = ROTATE;
+							break;
+						}
+						case ROTATE:
+						{
+							buildingAlgorithm = MIRROR;
+							break;
+						}
+						case MIRROR:
+						{
+							buildingAlgorithm = EXTRUDE;
+							break;
+						}
+					}
 					UpdateBuilding();
 				}
 			}
