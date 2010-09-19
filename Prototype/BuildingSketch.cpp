@@ -87,11 +87,11 @@ void BuildingSketch::UpdateBuilding()
 			polySide.reserve(4);
 
 			// Convert old 2D outline to a 3D outline.			
-			std::vector<int3> oldOutline;
+			std::vector<float3> oldOutline;
 			oldOutline.reserve(outline.size());
 			for (unsigned i = 0; i < outline.size(); i++)
 			{
-				int3 point = int3(outline[i].x, outline[i].y, 0);
+				float3 point = float3(outline[i].x, outline[i].y, 0);
 				oldOutline.push_back(point);
 			}
 
@@ -107,7 +107,7 @@ void BuildingSketch::UpdateBuilding()
 			for (int i = 0; i < rotationCount*2; i++)
 			{	
 				// rotate the old outline by rotAngle to get the new outline.
-				std::vector<int3> newOutline = oldOutline;
+				std::vector<float3> newOutline = oldOutline;
 				for (unsigned i = 0; i < newOutline.size(); i++)
 				{
 					double temp_x = newOutline[i].z*sin(rotAngle) + newOutline[i].x*cos(rotAngle);
