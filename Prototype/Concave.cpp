@@ -70,7 +70,7 @@ void Tess_Poly::Render_Contour(const std::vector<float3>& poly)
 		newPoly[i] = double3(poly[i].x, poly[i].y, poly[i].z);
 
 	gluTessBeginContour(tobj);
-	for (int x = 0; x < newPoly.size(); x++) //loop through the vertices
+	for (int x = 0; x < (int)newPoly.size(); x++) //loop through the vertices
 	{
 		gluTessVertex(tobj, newPoly[x].data, newPoly[x].data); //store the vertex
 	}

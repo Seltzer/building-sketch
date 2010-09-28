@@ -1,18 +1,12 @@
 #include "BuildingSketch.h"
 #include <iostream>
-const GLfloat trackballMatrix[4][4] = {
-				{1.0, 0.0, 0.0, 0.0},
-				{0.0, 1.0, 0.0, 0.0},
-				{0.0, 0.0, 1.0, 0.0},
-				{0.0, 0.0, 0.0, 1.0}
-			};
 
 BuildingSketch::BuildingSketch() : filled(false), yaw(0), pitch(0), zoom(0), extrude(false), showAxis(true) 
 {
-	mirrorSketch = false;
-	MouseAction = NONE;
-	rotationCount = 1;
+	mouseAction = NONE;
 	buildingAlgorithm = ROTATE;
+	mirrorSketch = false;
+	rotationCount = 1;
 	windowSize = int2(800, 600);
 	verticalDivision = windowSize.x/2;
 }
@@ -33,15 +27,16 @@ void BuildingSketch::UpdateBuilding()
 		maxCoords.x = (maxCoords.x > outline[i].x) ? maxCoords.x : outline[i].x;
 		maxCoords.y = (maxCoords.y > outline[i].y) ? maxCoords.y : outline[i].y;
 	}
-	int z_bounds = (extrude) ? 0 : abs(maxCoords.x - minCoords.x);
-	building.bounds = int3(abs(maxCoords.x - minCoords.x), abs(maxCoords.y - minCoords.y), z_bounds);
+	building.bounds.width = abs(maxCoords.x - minCoords.x);
+	building.bounds.height = abs(maxCoords.y - minCoords.y);
+	building.bounds.depth = (extrude) ? 0 : abs(maxCoords.x - minCoords.x);
 	// Move the building's center to the origin.
 	int x_dif = minCoords.x;
 	int y_dif = minCoords.y;
 	for (unsigned i = 0; i < outline.size(); i++)
 	{
-		outline[i].x -= x_dif + (building.bounds.x/2);
-		outline[i].y -= y_dif + (building.bounds.y/2);
+		outline[i].x -= x_dif + (building.bounds.width/2);
+		outline[i].y -= y_dif + (building.bounds.height/2);
 	}
 
 	switch (buildingAlgorithm)
@@ -56,14 +51,14 @@ void BuildingSketch::UpdateBuilding()
 			polySide.reserve(4);
 
 			// The depth is 80% of the building base.
-			int depth = 0.8*abs(outline[0].x - outline[outline.size()-1].x);
+			float depth = 0.8f*abs(building.bounds.width);
 
-			int2 previous = outline[0];
+			float2 previous = outline[0];
 			for (unsigned i = 0; i < outline.size(); i++)
 			{
-				int2 current = outline[i];
-				polyFront.push_back(float3(current.x, -current.y, -depth/2));
-				polyBack.push_back(float3(current.x, -current.y, depth/2));
+				float2 current = outline[i];
+				polyFront.push_back(float3(current.x, -current.y, -depth/2.0f));
+				polyBack.push_back(float3(current.x, -current.y, depth/2.0f));
 
 				if (i > 0) {
 					polySide.clear();
@@ -77,12 +72,12 @@ void BuildingSketch::UpdateBuilding()
 			}
 			building.polys.push_back(polyFront);
 			building.polys.push_back(polyBack);
-			building.bounds.z = depth;
+			building.bounds.depth = (int)depth;
 			break;
 		}
 		case ROTATE:	// Algorithm to create an rotated building
 		{
-			double rotAngle = (D_PI/rotationCount);
+			float rotAngle = (float)(D_PI/(rotationCount+1)); // rotate by atleast 90 degrees
 			std::vector<float3> polySide;
 			polySide.reserve(4);
 
@@ -91,7 +86,7 @@ void BuildingSketch::UpdateBuilding()
 			oldOutline.reserve(outline.size());
 			for (unsigned i = 0; i < outline.size(); i++)
 			{
-				float3 point = float3(outline[i].x, outline[i].y, 0);
+				float3 point = float3((float)outline[i].x, (float)outline[i].y, 0);
 				oldOutline.push_back(point);
 			}
 
@@ -104,25 +99,25 @@ void BuildingSketch::UpdateBuilding()
 				}
 			}
 
-			for (int i = 0; i < rotationCount*2; i++)
+			for (int j = 0; j < (rotationCount+1)*2; j++)
 			{	
 				// rotate the old outline by rotAngle to get the new outline.
 				std::vector<float3> newOutline = oldOutline;
 				for (unsigned i = 0; i < newOutline.size(); i++)
 				{
-					double temp_x = newOutline[i].z*sin(rotAngle) + newOutline[i].x*cos(rotAngle);
-					double temp_z = newOutline[i].z*cos(rotAngle) - newOutline[i].x*sin(rotAngle);
+					float temp_x = newOutline[i].z*sin(rotAngle) + newOutline[i].x*cos(rotAngle);
+					float temp_z = newOutline[i].z*cos(rotAngle) - newOutline[i].x*sin(rotAngle);
 					newOutline[i].x = temp_x;
 					newOutline[i].z = temp_z;
 				}
 
 				// Build each side polygon
-				int3 prevPoint_oldOutline = oldOutline[0];
-				int3 prevPoint_newOutline = newOutline[0];
+				float3 prevPoint_oldOutline = oldOutline[0];
+				float3 prevPoint_newOutline = newOutline[0];
 				for (unsigned i = 1; i < newOutline.size(); i++)
 				{
-					int3 currentPoint_newOutline = newOutline[i];
-					int3 currentPoint_oldOutline = oldOutline[i];
+					float3 currentPoint_newOutline = newOutline[i];
+					float3 currentPoint_oldOutline = oldOutline[i];
 					polySide.clear();
 					polySide.push_back(float3(currentPoint_newOutline.x, -currentPoint_newOutline.y, currentPoint_newOutline.z));
 					polySide.push_back(float3(currentPoint_oldOutline.x, -currentPoint_oldOutline.y, currentPoint_oldOutline.z));					
@@ -188,27 +183,23 @@ void BuildingSketch::Process(const Stroke& stroke)
 
 void BuildingSketch::MousePressed(int2 pos)
 {
-	if (pos.y < verticalDivision) // Mouse pressed on the left side.
+	if (pos.x < verticalDivision) // Mouse pressed on the left panel.
 	{
-		MouseAction = DRAWING;
+		mouseAction = DRAWING;
 	}
-	else // Mouse pressed on the right side.
+	else // Mouse pressed on the right panel.
 	{
-		MouseAction = TRACKING;
-		// Map the mouse position to a logical sphere location.
-		// Keep it in the class variable lastPoint.
-		lastPoint = trackBallMapping( pos );
+		mouseAction = TRACKING;
+		dragOrigin = pos;
 	}
 }
 
 void BuildingSketch::MouseReleased(int2 pos)
 {	
-	switch (MouseAction) 
+	switch (mouseAction) 
 	{
 		case DRAWING:
 		{
-			// If we just stopped drawing
-			MouseAction = NONE;
 			if (currentStroke.points.size() >=2) // We don't care about dots
 			{
 				Process(currentStroke); // Process
@@ -219,16 +210,15 @@ void BuildingSketch::MouseReleased(int2 pos)
 		}
 		case TRACKING:
 		{
-			MouseAction = NONE;
 			break;
 		}
 	}
+	mouseAction = NONE;
 }
 
 void BuildingSketch::MouseMoved(int2 pos)
 {
-	float3 curPoint;
-	switch (MouseAction) 
+	switch (mouseAction) 
 	{
 		case DRAWING:
 		{
@@ -238,80 +228,37 @@ void BuildingSketch::MouseMoved(int2 pos)
 		}
 		case TRACKING:
 		{
-			float m_ROTSCALE = 10.0f;
-			float3 direction;
-			GLfloat tempMatrix[4][4] = {
-				{1.0, 0.0, 0.0, 0.0},
-				{0.0, 1.0, 0.0, 0.0},
-				{0.0, 0.0, 1.0, 0.0},
-				{0.0, 0.0, 0.0, 1.0}
-			};
-
-			curPoint = trackBallMapping( pos );  // Map the mouse position to a logical sphere location.
-			direction = curPoint - lastPoint;
-			float velocity = direction.length();
-			if( velocity > 0.0001 ) // If little movement - do nothing.
-			{				
-				// Rotate about the axis that is perpendicular to the great circle 
-				// connecting the mouse movements.
-				rotAxis;
-				rotAxis = cross( lastPoint, curPoint );
-				rot_angle = velocity * m_ROTSCALE;
-
-				// We need to apply the rotation as the last transformation.
-				// 1. Get the current matrix and save it.
-				// 2. Set the matrix to the identity matrix (clear it).
-				// 3. Apply the trackball rotation.
-				// 4. Pre-multiply it by the saved matrix.
-				/*glGetFloatv( GL_MODELVIEW_MATRIX, (GLfloat *) tempMatrix );
-				
-				glLoadIdentity();
-				glRotatef( rot_angle, rotAxis.x, rotAxis.y, rotAxis.z );
-				glMultMatrixf( (GLfloat *) trackballMatrix );		
-				glGetFloatv( GL_MODELVIEW_MATRIX, (GLfloat *) trackballMatrix );	*/	
+			float TRACK_SCALE = 0.4f;
+			pitch += (pos.y - dragOrigin.y)*TRACK_SCALE;
+			// Gimbal lock fix
+			// http://en.wikipedia.org/wiki/Gimbal_lock
+			if (pitch > 360)
+				pitch = 0;
+			if (pitch >= 90 && pitch < 270) {
+				yaw -= (pos.x - dragOrigin.x)*TRACK_SCALE;
+			} else {
+				yaw += (pos.x - dragOrigin.x)*TRACK_SCALE;
 			}
-			// If we want to see it, we need to force the system to redraw the scene.
-			//Invalidate( TRUE );
-
-			// Save the location of the current point for the next movement.
-			break;
+			dragOrigin = pos;			
 		}
-		lastPoint = curPoint;
 	}		
 }
 
 void BuildingSketch::MouseWheelMoved(int delta)
 {
-	double ZOOM_SCALE = 5.0;
+	float ZOOM_SCALE = 5.0;
 	if (delta < 0)
 	{
 		// Zoom in
 		zoom = zoom + ZOOM_SCALE;
-		zoom = (zoom>30.0) ? 30.0: zoom;
+		zoom = (zoom>30.0f) ? 30.0f: zoom;
 	}
 	else if (delta > 0)
 	{
 		// Zoom out
 		zoom = zoom - ZOOM_SCALE;
-		zoom = (zoom<-30.0) ? -30.0: zoom;
+		zoom = (zoom<-30.0f) ? -30.0f: zoom;
 	} 
-}
-
-// Treat the mouse position as the projection of a point on the hemi-sphere
-// down to the image plane (along the z-axis), and determine that point on
-// the hemi-sphere.
-float3 BuildingSketch::trackBallMapping(float2 point)
-{
-    double3 v;
-    double d;
-    v.x = (2.0*(point.x - verticalDivision) - windowSize.x) / windowSize.x;
-	v.y = ((windowSize.y - verticalDivision) - 2.0*(point.y - verticalDivision)) / (windowSize.y - verticalDivision);
-    v.z = 0.0;
-    d = v.length();
-    d = (d<1.0) ? d : 1.0;
-    v.z = sqrt(1.001 - d*d);
-    v.normalise(); // Still need to normalize, since we only capped d, not v.
-    return v;
 }
 
 void BuildingSketch::RenderLines()
@@ -343,12 +290,6 @@ void BuildingSketch::RenderLines()
 
 void BuildingSketch::RenderBuilding()
 {
-	glRotatef(pitch, 1, 0, 0);
-	glRotatef(yaw, 0, 1, 0);
-
-	//glTranslatef(win->GetWidth()/4, -(win->GetHeight()/2), win->GetWidth()/4);
-
-
 	glColor3f(0,1, 0);
 	for (std::vector<Poly>::iterator p = building.polys.begin(); p != building.polys.end(); p++)
 	{
@@ -371,6 +312,7 @@ void BuildingSketch::RenderBuilding()
 			glVertex3f(0, 0, 200);
 		glEnd();
 	}
+
 	/*glBegin(GL_LINE_STRIP); // Draw raw stroke as line strip
 	for (std::vector<float2>::const_iterator v = clipped.begin(); v != clipped.end(); v++)
 	glVertex3f(v->x, -v->y, 0);
@@ -409,13 +351,13 @@ void BuildingSketch::RenderLoop()
 			if (Event.Type == sf::Event::KeyPressed)
 			{
 				if (Event.Key.Code == sf::Key::Left)
-					yaw -= 5; // TODO: Time based
+					yaw = 0; // TODO: Time based
 				else if (Event.Key.Code == sf::Key::Right)
-					yaw += 5;
+					yaw = 0;
 				else if (Event.Key.Code == sf::Key::Up)
-					pitch += 5; // TODO: Time based
+					pitch = 0; // TODO: Time based
 				else if (Event.Key.Code == sf::Key::Down)
-					pitch -= 5;
+					pitch = 0;
 				// Toggle wireframe fill on and off.
 				else if (Event.Key.Code == sf::Key::W)
 					filled = !filled;
@@ -468,18 +410,20 @@ void BuildingSketch::RenderLoop()
 			if (Event.Type == sf::Event::MouseMoved)
 				MouseMoved(int2(Event.MouseMove.X, Event.MouseMove.Y));
 			if (Event.Type == sf::Event::MouseButtonPressed && Event.MouseButton.Button == sf::Mouse::Left)
-				MousePressed(int2(Event.MouseMove.X, Event.MouseMove.Y));
+				MousePressed(int2(Event.MouseButton.X, Event.MouseButton.Y));
 			if (Event.Type == sf::Event::MouseButtonReleased && Event.MouseButton.Button == sf::Mouse::Left)
 				MouseReleased(int2(Event.MouseMove.X, Event.MouseMove.Y));
 			if (Event.Type == sf::Event::MouseWheelMoved)
 				MouseWheelMoved(Event.MouseWheel.Delta);
+			if (Event.Type == sf::Event::MouseLeft)
+				MouseReleased(int2(Event.MouseMove.X, Event.MouseMove.Y));
 		}
 
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glViewport(0, 0, verticalDivision, win->GetHeight());
-		
+
+		glViewport(0, 0, verticalDivision, win->GetHeight());		
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		glOrtho(0, verticalDivision, win->GetHeight(), 0, -100, 100);
@@ -493,10 +437,11 @@ void BuildingSketch::RenderLoop()
 		glLoadIdentity();
 		gluPerspective(45 + zoom, (float(win->GetWidth())  - verticalDivision) / win->GetHeight(), 10.0f, 10000.0f);
 		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-			
+		glLoadIdentity();			
 		glEnable(GL_DEPTH_TEST);
 		glTranslatef(0, 0, -1000); // Move it to an appropriate position to view.
+		glRotatef(pitch, 1, 0, 0);
+		glRotatef(yaw, 0, 1, 0);
 
 		RenderBuilding();
 		glDisable(GL_DEPTH_TEST);

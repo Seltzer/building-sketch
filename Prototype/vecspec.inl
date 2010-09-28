@@ -169,7 +169,7 @@ inline T vec<T, S>::sqlength() const
 template<class T>
 inline void vec<T, S>::normalise()
 {
-	float invLeng = 1.0f / length();
+	float invLeng = 1.0f / (float)length();
 	for (int i = 0; i < S; i++)
 		data[i] *= invLeng;
 }

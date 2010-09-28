@@ -20,9 +20,16 @@ public:
 		std::vector<int2> points;
 	};
 
+	struct BuildingBounds
+	{
+		int width;
+		int height;
+		int depth;
+	};
+
 	struct Building
 	{
-		int3 bounds;
+		BuildingBounds bounds;
 		std::vector<Poly> polys;
 	};
 	
@@ -58,17 +65,15 @@ private:
 	int2 windowSize;
 	int verticalDivision;
 
-	MOUSE_ACTION MouseAction;
+	MOUSE_ACTION mouseAction;
 	bool filled;
 	bool extrude;
 	bool showAxis;
 	bool mirrorSketch;
 	float yaw;
 	float pitch;
-	double zoom;
-	float rot_angle;
-	float3 rotAxis;
-	float3 lastPoint;
+	float zoom;
+	int2 dragOrigin;
 };
 
 #endif //BUILDINGSKETCH_H
