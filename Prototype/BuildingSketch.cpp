@@ -50,28 +50,20 @@ void BuildingSketch::UpdateBuilding()
 	switch (buildingAlgorithm)
 	{
 		case EXTRUDE:	// Algorithm to create an extruded building
-		{		
+		{					
+			std::vector<float3> featurePolyFront;
+			std::vector<float3> featurePolyBack;
+			std::vector<float3> featurePolySide;
 			std::vector<float3> polyFront;
-			polyFront.reserve(outline.size());
 			std::vector<float3> polyBack;
-			polyBack.reserve(outline.size());
 			std::vector<float3> polySide;
+
+			polyFront.reserve(outline.size());
+			polyBack.reserve(outline.size());
 			polySide.reserve(4);
 
-			// The depth is 80% of the building base.
+			// The depth is 80% of the building width.
 			float depth = 0.8f*abs(building.bounds.width);
-			
-			for (std::vector<Stroke>::iterator s = processedFeatureOutlines.begin();
-				s != processedFeatureOutlines.end(); s++)
-			{
-				std::vector<int2> stroke = (*s).points;
-				for (int i = 0; i < stroke.size(); i++)
-				{
-					float2 current = stroke[i];
-					polyFront.push_back(float3(current.x, -current.y, depth/2));
-				}
-				polyFront.push_back(float3(stroke[0].x, -stroke[0].y, depth/2));
-			}
 
 			float2 previous = outline[0];
 			for (int i = 0; i < outline.size(); i++)
@@ -90,10 +82,48 @@ void BuildingSketch::UpdateBuilding()
 				}
 				previous = current;
 			}
-			polyFront.push_back(float3(outline[0].x, -outline[0].y, depth/2));
-
 			building.polys.push_back(polyFront);
 			building.polys.push_back(polyBack);
+
+			// Work out the feature polygons
+			for (std::vector<Stroke>::iterator s = processedFeatureOutlines.begin();
+				s != processedFeatureOutlines.end(); s++)
+			{
+				std::vector<int2> stroke = (*s).points;
+				featurePolyFront.clear();
+				featurePolyBack.clear();
+				featurePolySide.clear();
+				featurePolyFront.reserve(stroke.size());
+				featurePolyBack.reserve(stroke.size());
+				featurePolySide.reserve(4);
+
+				// The depth is 20% of the stroke width.
+				float featureDepth = 0.1f*abs((*s).bounds.width);
+
+				float2 previous = stroke[0];
+				for (int i = 0; i < stroke.size(); i++)
+				{
+					float2 current = stroke[i];
+					featurePolyFront.push_back(float3(current.x, -current.y, featureDepth+depth/2));
+					featurePolyBack.push_back(float3(current.x, -current.y, depth/2));
+
+					if (i > 0) {
+						featurePolySide.clear();
+						featurePolySide.push_back(float3(current.x, -current.y, depth/2));
+						featurePolySide.push_back(float3(current.x, -current.y, featureDepth+depth/2));
+						featurePolySide.push_back(float3(previous.x, -previous.y, featureDepth+depth/2));
+						featurePolySide.push_back(float3(previous.x, -previous.y, depth/2));
+						building.polys.push_back(featurePolySide);
+					}
+					previous = current;
+				}
+				featurePolyFront.push_back(float3(stroke[0].x, -stroke[0].y, featureDepth+depth/2));
+				featurePolyBack.push_back(float3(stroke[0].x, -stroke[0].y, depth/2));
+
+				building.polys.push_back(featurePolyFront);
+				building.polys.push_back(featurePolyBack);
+			}
+
 			building.bounds.depth = (int)depth;
 			break;
 		}
