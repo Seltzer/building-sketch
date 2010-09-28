@@ -15,36 +15,47 @@ void BuildingSketch::UpdateBuilding()
 {
 	// TODO: Consider more than the most recent stroke
 	building.polys.clear();
-	// The longest stroke is the outline
-	std::vector<int2> outline = (*polyLines.begin()).points;
-	int maxLength = (*polyLines.begin()).length;
-	for (std::vector<Stroke>::iterator s = polyLines.begin() + 1; s != polyLines.end(); s++)
+
+	// Calculate the bounds of each stroke
+	for (std::vector<Stroke>::iterator s = polyLines.begin(); s != polyLines.end(); s++)
 	{
-		if ((*s).length > maxLength) {
-			outline = (*s).points;
+		std::vector<int2> points = (*s).points;
+		int2 minCoords = int2(points[0].x,points[0].y);
+		int2 maxCoords = int2(points[0].x,points[0].y);
+		for (unsigned i = 0; i < points.size(); i++)
+		{
+			minCoords.x = (minCoords.x < points[i].x) ? minCoords.x : points[i].x;
+			minCoords.y = (minCoords.y < points[i].y) ? minCoords.y : points[i].y;
+			maxCoords.x = (maxCoords.x > points[i].x) ? maxCoords.x : points[i].x;
+			maxCoords.y = (maxCoords.y > points[i].y) ? maxCoords.y : points[i].y;
+		}
+		(*s).bounds.width = abs(maxCoords.x - minCoords.x);
+		(*s).bounds.height = abs(maxCoords.y - minCoords.y);
+		(*s).bounds.depth = 0;
+
+		// Move the stroke's center to the origin.
+		int x_dif = minCoords.x;
+		int y_dif = minCoords.y;
+		for (unsigned i = 0; i < points.size(); i++)
+		{
+			(*s).points[i].x -= x_dif + ((*s).bounds.width/2);
+			(*s).points[i].y -= y_dif + ((*s).bounds.height/2);
 		}
 	}
 
-	// Calculate the bounds of the building
-	int2 minCoords = int2(outline[0].x,outline[0].y);
-	int2 maxCoords = int2(outline[0].x,outline[0].y);
-	for (unsigned i = 0; i < outline.size(); i++)
+	// The stroke that encompasses the largest area is the outline
+	std::vector<int2> outline;
+	float maxArea = 0;
+	for (std::vector<Stroke>::iterator s = polyLines.begin(); s != polyLines.end(); s++)
 	{
-		minCoords.x = (minCoords.x < outline[i].x) ? minCoords.x : outline[i].x;
-		minCoords.y = (minCoords.y < outline[i].y) ? minCoords.y : outline[i].y;
-		maxCoords.x = (maxCoords.x > outline[i].x) ? maxCoords.x : outline[i].x;
-		maxCoords.y = (maxCoords.y > outline[i].y) ? maxCoords.y : outline[i].y;
-	}
-	building.bounds.width = abs(maxCoords.x - minCoords.x);
-	building.bounds.height = abs(maxCoords.y - minCoords.y);
-	building.bounds.depth = (buildingAlgorithm == EXTRUDE) ? 0 : abs(maxCoords.x - minCoords.x);
-	// Move the building's center to the origin.
-	int x_dif = minCoords.x;
-	int y_dif = minCoords.y;
-	for (unsigned i = 0; i < outline.size(); i++)
-	{
-		outline[i].x -= x_dif + (building.bounds.width/2);
-		outline[i].y -= y_dif + (building.bounds.height/2);
+		float strokeArea = (*s).bounds.height * (*s).bounds.width;
+		if (strokeArea > maxArea) {
+			outline = (*s).points;
+			building.bounds.width = (*s).bounds.width;
+			building.bounds.height = (*s).bounds.height;
+			building.bounds.depth = (buildingAlgorithm == EXTRUDE) ? 0 : (*s).bounds.width;
+			maxArea = strokeArea;
+		}
 	}
 
 	switch (buildingAlgorithm)
@@ -184,6 +195,7 @@ void BuildingSketch::Process(const Stroke& stroke)
 {
 	strokes.push_back(currentStroke); // Record unprocessed stroke
 	Stroke reduced = Reduce(stroke, 100.0f);
+	reducedStrokes.push_back(reduced);
 	polyLines.push_back(reduced);
 }
 
@@ -286,9 +298,9 @@ void BuildingSketch::RenderLines()
 	}
 	DrawStroke(currentStroke);
 
-	// Draw processed strokes
+	// Draw processed reduced strokes
 	glColor3f(1, 0, 0);
-	for (std::vector<Stroke>::iterator s = polyLines.begin(); s != polyLines.end(); s++)
+	for (std::vector<Stroke>::iterator s = reducedStrokes.begin(); s != reducedStrokes.end(); s++)
 	{
 		DrawStroke(*s);
 	}
@@ -415,6 +427,7 @@ void BuildingSketch::RenderLoop()
 				{
 					strokes.clear();
 					polyLines.clear();
+					reducedStrokes.clear();
 				}
 			}
 

@@ -15,22 +15,23 @@ public:
 	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};
 	enum BUILDING_ALGORITHM { EXTRUDE, ROTATE, MIRROR};
 
-	struct Stroke
-	{
-		int length;
-		std::vector<int2> points;
-	};
-
-	struct BuildingBounds
+	struct Bounds
 	{
 		int width;
 		int height;
 		int depth;
 	};
 
+	struct Stroke
+	{
+		int length;
+		Bounds bounds;
+		std::vector<int2> points;
+	};
+
 	struct Building
 	{
-		BuildingBounds bounds;
+		Bounds bounds;
 		std::vector<Poly> polys;
 	};
 	
@@ -57,6 +58,7 @@ private:
 
 	Stroke currentStroke;
 	std::vector<Stroke> strokes;
+	std::vector<Stroke> reducedStrokes;
 	std::vector<Stroke> polyLines;
 
 	Building building;
