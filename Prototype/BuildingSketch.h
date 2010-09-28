@@ -17,6 +17,7 @@ public:
 
 	struct Stroke
 	{
+		int length;
 		std::vector<int2> points;
 	};
 
@@ -67,7 +68,6 @@ private:
 
 	MOUSE_ACTION mouseAction;
 	bool filled;
-	bool extrude;
 	bool showAxis;
 	bool mirrorSketch;
 	float yaw;

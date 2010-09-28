@@ -1,12 +1,12 @@
 #include "BuildingSketch.h"
 #include <iostream>
 
-BuildingSketch::BuildingSketch() : filled(false), yaw(0), pitch(0), zoom(0), extrude(false), showAxis(true) 
+BuildingSketch::BuildingSketch() : filled(true), yaw(45), pitch(25), zoom(0), showAxis(true) 
 {
 	mouseAction = NONE;
 	buildingAlgorithm = ROTATE;
 	mirrorSketch = false;
-	rotationCount = 1;
+	rotationCount = 8;
 	windowSize = int2(800, 600);
 	verticalDivision = windowSize.x/2;
 }
@@ -15,7 +15,15 @@ void BuildingSketch::UpdateBuilding()
 {
 	// TODO: Consider more than the most recent stroke
 	building.polys.clear();
-	std::vector<int2> outline = polyLines.back().points;
+	// The longest stroke is the outline
+	std::vector<int2> outline = (*polyLines.begin()).points;
+	int maxLength = (*polyLines.begin()).length;
+	for (std::vector<Stroke>::iterator s = polyLines.begin() + 1; s != polyLines.end(); s++)
+	{
+		if ((*s).length > maxLength) {
+			outline = (*s).points;
+		}
+	}
 
 	// Calculate the bounds of the building
 	int2 minCoords = int2(outline[0].x,outline[0].y);
@@ -29,7 +37,7 @@ void BuildingSketch::UpdateBuilding()
 	}
 	building.bounds.width = abs(maxCoords.x - minCoords.x);
 	building.bounds.height = abs(maxCoords.y - minCoords.y);
-	building.bounds.depth = (extrude) ? 0 : abs(maxCoords.x - minCoords.x);
+	building.bounds.depth = (buildingAlgorithm == EXTRUDE) ? 0 : abs(maxCoords.x - minCoords.x);
 	// Move the building's center to the origin.
 	int x_dif = minCoords.x;
 	int y_dif = minCoords.y;
@@ -174,8 +182,6 @@ void BuildingSketch::UpdateBuilding()
 
 void BuildingSketch::Process(const Stroke& stroke)
 {
-	strokes.clear();
-	polyLines.clear();
 	strokes.push_back(currentStroke); // Record unprocessed stroke
 	Stroke reduced = Reduce(stroke, 100.0f);
 	polyLines.push_back(reduced);
@@ -290,7 +296,7 @@ void BuildingSketch::RenderLines()
 
 void BuildingSketch::RenderBuilding()
 {
-	glColor3f(0,1, 0);
+	glColor3f(0.0f, 1.0f, 0.0f);
 	for (std::vector<Poly>::iterator p = building.polys.begin(); p != building.polys.end(); p++)
 	{
 		DrawOutline(*p);
@@ -405,6 +411,11 @@ void BuildingSketch::RenderLoop()
 					}
 					UpdateBuilding();
 				}
+				else if (Event.Key.Code == sf::Key::Space)
+				{
+					strokes.clear();
+					polyLines.clear();
+				}
 			}
 
 			if (Event.Type == sf::Event::MouseMoved)
@@ -502,6 +513,7 @@ BuildingSketch::Stroke BuildingSketch::Reduce(const Stroke& stroke, float thresh
 	std::vector<int2> result = DouglasPeuker(stroke.points.begin(), stroke.points.end() - 1, threshold);
 	result.push_back(stroke.points.back()); // The recursion will never insert the last point.
 	Stroke final;
+	final.length = stroke.points.size();
 	final.points = result;
 	return final;
 }
