@@ -2,13 +2,14 @@
 #include <iostream>
 
 BuildingSketch::BuildingSketch() : filled(true), yaw(45), pitch(25), zoom(0), showAxis(true) 
-{
-	mouseAction = NONE;
-	buildingAlgorithm = ROTATE;
-	mirrorSketch = false;
-	rotationCount = 8;
+{	
 	windowSize = int2(800, 600);
 	verticalDivision = windowSize.x/2;
+	mouseAction = NONE;
+	buildingAlgorithm = EXTRUDE;
+	mirrorSketch = false;
+	rotationCount = 8;
+	maxArea = 0;
 }
 
 void BuildingSketch::UpdateBuilding()
@@ -16,47 +17,35 @@ void BuildingSketch::UpdateBuilding()
 	// TODO: Consider more than the most recent stroke
 	building.polys.clear();
 
-	// Calculate the bounds of each stroke
-	for (std::vector<Stroke>::iterator s = polyLines.begin(); s != polyLines.end(); s++)
-	{
-		std::vector<int2> points = (*s).points;
-		int2 minCoords = int2(points[0].x,points[0].y);
-		int2 maxCoords = int2(points[0].x,points[0].y);
-		for (unsigned i = 0; i < points.size(); i++)
-		{
-			minCoords.x = (minCoords.x < points[i].x) ? minCoords.x : points[i].x;
-			minCoords.y = (minCoords.y < points[i].y) ? minCoords.y : points[i].y;
-			maxCoords.x = (maxCoords.x > points[i].x) ? maxCoords.x : points[i].x;
-			maxCoords.y = (maxCoords.y > points[i].y) ? maxCoords.y : points[i].y;
-		}
-		(*s).bounds.width = abs(maxCoords.x - minCoords.x);
-		(*s).bounds.height = abs(maxCoords.y - minCoords.y);
-		(*s).bounds.depth = 0;
+	building.bounds.x = buildingOutline.bounds.x;
+	building.bounds.y = buildingOutline.bounds.y;
+	building.bounds.width = buildingOutline.bounds.width;
+	building.bounds.height = buildingOutline.bounds.height;
+	building.bounds.depth = (buildingAlgorithm == EXTRUDE) ? 0 : buildingOutline.bounds.width;
 
-		// Move the stroke's center to the origin.
-		int x_dif = minCoords.x;
-		int y_dif = minCoords.y;
-		for (unsigned i = 0; i < points.size(); i++)
-		{
-			(*s).points[i].x -= x_dif + ((*s).bounds.width/2);
-			(*s).points[i].y -= y_dif + ((*s).bounds.height/2);
-		}
+	std::vector<int2> outline = buildingOutline.points;
+	// Move the building's center to the origin.
+	int x_dif = building.bounds.x + (building.bounds.width/2);
+	int y_dif = building.bounds.y + (building.bounds.height/2);
+	for (unsigned i = 0; i < outline.size(); i++)
+	{
+		outline[i].x -= x_dif;
+		outline[i].y -= y_dif;
 	}
 
-	// The stroke that encompasses the largest area is the outline
-	std::vector<int2> outline;
-	float maxArea = 0;
-	for (std::vector<Stroke>::iterator s = polyLines.begin(); s != polyLines.end(); s++)
+	// Move the feature outlines accordingly
+	std::vector<Stroke> processedFeatureOutlines;
+	for (std::vector<Stroke>::iterator s = featureOutlines.begin(); s != featureOutlines.end(); s++)
 	{
-		float strokeArea = (*s).bounds.height * (*s).bounds.width;
-		if (strokeArea > maxArea) {
-			outline = (*s).points;
-			building.bounds.width = (*s).bounds.width;
-			building.bounds.height = (*s).bounds.height;
-			building.bounds.depth = (buildingAlgorithm == EXTRUDE) ? 0 : (*s).bounds.width;
-			maxArea = strokeArea;
+		Stroke stroke = (*s);
+		for (unsigned i = 0; i < stroke.points.size(); i++)
+		{
+			stroke.points[i].x -= x_dif;
+			stroke.points[i].y -= y_dif;
 		}
+		processedFeatureOutlines.push_back(stroke);
 	}
+
 
 	switch (buildingAlgorithm)
 	{
@@ -71,13 +60,25 @@ void BuildingSketch::UpdateBuilding()
 
 			// The depth is 80% of the building base.
 			float depth = 0.8f*abs(building.bounds.width);
+			
+			for (std::vector<Stroke>::iterator s = processedFeatureOutlines.begin();
+				s != processedFeatureOutlines.end(); s++)
+			{
+				std::vector<int2> stroke = (*s).points;
+				for (int i = 0; i < stroke.size(); i++)
+				{
+					float2 current = stroke[i];
+					polyFront.push_back(float3(current.x, -current.y, depth/2));
+				}
+				polyFront.push_back(float3(stroke[0].x, -stroke[0].y, depth/2));
+			}
 
 			float2 previous = outline[0];
-			for (unsigned i = 0; i < outline.size(); i++)
+			for (int i = 0; i < outline.size(); i++)
 			{
 				float2 current = outline[i];
-				polyFront.push_back(float3(current.x, -current.y, -depth/2.0f));
-				polyBack.push_back(float3(current.x, -current.y, depth/2.0f));
+				polyFront.push_back(float3(current.x, -current.y, depth/2));
+				polyBack.push_back(float3(current.x, -current.y, -depth/2));
 
 				if (i > 0) {
 					polySide.clear();
@@ -89,6 +90,8 @@ void BuildingSketch::UpdateBuilding()
 				}
 				previous = current;
 			}
+			polyFront.push_back(float3(outline[0].x, -outline[0].y, depth/2));
+
 			building.polys.push_back(polyFront);
 			building.polys.push_back(polyBack);
 			building.bounds.depth = (int)depth;
@@ -103,7 +106,7 @@ void BuildingSketch::UpdateBuilding()
 			// Convert old 2D outline to a 3D outline.			
 			std::vector<float3> oldOutline;
 			oldOutline.reserve(outline.size());
-			for (unsigned i = 0; i < outline.size(); i++)
+			for (int i = 0; i < outline.size(); i++)
 			{
 				float3 point = float3((float)outline[i].x, (float)outline[i].y, 0);
 				oldOutline.push_back(point);
@@ -111,7 +114,7 @@ void BuildingSketch::UpdateBuilding()
 
 			// Mirror the sketch so everything lines up on a central axis
 			if (mirrorSketch) {
-				for (unsigned i = 0; i < oldOutline.size()/2; i++)
+				for (int i = 0; i < oldOutline.size()/2; i++)
 				{
 					oldOutline[oldOutline.size()-1-i].x = -oldOutline[i].x;
 					oldOutline[oldOutline.size()-1-i].y = oldOutline[i].y;
@@ -122,7 +125,7 @@ void BuildingSketch::UpdateBuilding()
 			{	
 				// rotate the old outline by rotAngle to get the new outline.
 				std::vector<float3> newOutline = oldOutline;
-				for (unsigned i = 0; i < newOutline.size(); i++)
+				for (int i = 0; i < newOutline.size(); i++)
 				{
 					float temp_x = newOutline[i].z*sin(rotAngle) + newOutline[i].x*cos(rotAngle);
 					float temp_z = newOutline[i].z*cos(rotAngle) - newOutline[i].x*sin(rotAngle);
@@ -133,7 +136,7 @@ void BuildingSketch::UpdateBuilding()
 				// Build each side polygon
 				float3 prevPoint_oldOutline = oldOutline[0];
 				float3 prevPoint_newOutline = newOutline[0];
-				for (unsigned i = 1; i < newOutline.size(); i++)
+				for (int i = 1; i < newOutline.size(); i++)
 				{
 					float3 currentPoint_newOutline = newOutline[i];
 					float3 currentPoint_oldOutline = oldOutline[i];
@@ -191,12 +194,55 @@ void BuildingSketch::UpdateBuilding()
 	}
 }
 
-void BuildingSketch::Process(const Stroke& stroke)
+void BuildingSketch::ProcessStroke(const Stroke& stroke)
 {
 	strokes.push_back(currentStroke); // Record unprocessed stroke
 	Stroke reduced = Reduce(stroke, 100.0f);
 	reducedStrokes.push_back(reduced);
-	polyLines.push_back(reduced);
+	
+	// Calculate the bounds of each stroke. The modified and bounded strokes
+	// will be stored in polyLines and used to generate the 3D building model.
+	std::vector<int2> points = reduced.points;
+	int2 minCoords = int2(points[0].x,points[0].y);
+	int2 maxCoords = int2(points[0].x,points[0].y);
+	for (unsigned i = 0; i < points.size(); i++)
+	{
+		minCoords.x = (minCoords.x < points[i].x) ? minCoords.x : points[i].x;
+		minCoords.y = (minCoords.y < points[i].y) ? minCoords.y : points[i].y;
+		maxCoords.x = (maxCoords.x > points[i].x) ? maxCoords.x : points[i].x;
+		maxCoords.y = (maxCoords.y > points[i].y) ? maxCoords.y : points[i].y;
+	}
+	// Store the bounds of the stroke
+	reduced.bounds.x = minCoords.x;
+	reduced.bounds.y = minCoords.y;
+	reduced.bounds.width = abs(maxCoords.x - minCoords.x);
+	reduced.bounds.height = abs(maxCoords.y - minCoords.y);
+	reduced.bounds.depth = 0;
+
+	// The stroke that encompasses the largest area is the outline
+	// All other strokes should be treated as features.
+	float strokeArea = reduced.bounds.height * reduced.bounds.width;
+	if (strokeArea > maxArea) {
+		if (maxArea > 0) featureOutlines.push_back(buildingOutline);
+		buildingOutline = reduced;
+		maxArea = strokeArea;
+	} else {
+		featureOutlines.push_back(reduced);
+	}
+}
+
+/* 
+ * Reset all the stroke vectors.
+ */
+void BuildingSketch::ResetStrokes() 
+{	
+	strokes.clear();
+	reducedStrokes.clear();		
+	polyLines.clear();
+	featureOutlines.clear();
+	buildingOutline = Stroke();	
+	currentStroke = Stroke();
+	maxArea = 0;
 }
 
 void BuildingSketch::MousePressed(int2 pos)
@@ -220,7 +266,7 @@ void BuildingSketch::MouseReleased(int2 pos)
 		{
 			if (currentStroke.points.size() >=2) // We don't care about dots
 			{
-				Process(currentStroke); // Process
+				ProcessStroke(currentStroke); // Process the stroke
 				UpdateBuilding();
 			}
 			currentStroke = Stroke(); // Reset stroke for next drawing
@@ -424,11 +470,7 @@ void BuildingSketch::RenderLoop()
 					UpdateBuilding();
 				}
 				else if (Event.Key.Code == sf::Key::Space)
-				{
-					strokes.clear();
-					polyLines.clear();
-					reducedStrokes.clear();
-				}
+					ResetStrokes();
 			}
 
 			if (Event.Type == sf::Event::MouseMoved)

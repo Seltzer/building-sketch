@@ -17,6 +17,8 @@ public:
 
 	struct Bounds
 	{
+		int x;
+		int y;
 		int width;
 		int height;
 		int depth;
@@ -43,7 +45,8 @@ public:
 	void RandomColor();
 	void DrawOutline(const Poly poly);
 	void UpdateBuilding();
-	void Process(const Stroke& stroke);
+	void ProcessStroke(const Stroke& stroke);
+	void ResetStrokes();
 	void MousePressed(int2 pos);
 	void MouseReleased(int2 pos);
 	void MouseMoved(int2 pos);
@@ -60,6 +63,8 @@ private:
 	std::vector<Stroke> strokes;
 	std::vector<Stroke> reducedStrokes;
 	std::vector<Stroke> polyLines;
+	std::vector<Stroke> featureOutlines;
+	Stroke buildingOutline;
 
 	Building building;
 	BUILDING_ALGORITHM buildingAlgorithm;
@@ -75,6 +80,7 @@ private:
 	float yaw;
 	float pitch;
 	float zoom;
+	float maxArea;
 	int2 dragOrigin;
 };
 
