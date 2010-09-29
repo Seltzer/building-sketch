@@ -11,7 +11,7 @@ void __stdcall vertexCallback(GLvoid *vertex)
 	glVertex3dv(v.data);
 }
 
-void __stdcall beginCallback()
+/*void __stdcall beginCallback()
 {
 	glBegin(GL_POLYGON);
 }
@@ -20,7 +20,7 @@ void __stdcall endCallback()
 {
 	//glEnd();
 	std::cout << std::endl;
-}
+}*/
 
 void CALLBACK combineCallback(double coords[3], double *vertex_data[4],
 							  float weight[4], double **dataOut)
@@ -54,7 +54,7 @@ Tess_Poly::Tess_Poly()
 	gluTessCallback(tobj, GLU_TESS_END, (void (__stdcall *)())&glEnd);
 	gluTessCallback(tobj, GLU_TESS_COMBINE, (void (__stdcall *)())&combineCallback);
 
-	gluTessProperty(tobj, GLU_TESS_WINDING_RULE, GLU_TESS_WINDING_ODD); 
+	gluTessProperty(tobj, GLU_TESS_WINDING_RULE, GLU_TESS_WINDING_NONZERO); 
 }
 
 Tess_Poly::~Tess_Poly()
@@ -70,7 +70,7 @@ void Tess_Poly::Render_Contour(const std::vector<float3>& poly)
 		newPoly[i] = double3(poly[i].x, poly[i].y, poly[i].z);
 
 	gluTessBeginContour(tobj);
-	for (int x = 0; x < (int)newPoly.size(); x++) //loop through the vertices
+	for (unsigned x = 0; x < newPoly.size(); x++) //loop through the vertices
 	{
 		gluTessVertex(tobj, newPoly[x].data, newPoly[x].data); //store the vertex
 	}

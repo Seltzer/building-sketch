@@ -14,7 +14,6 @@ BuildingSketch::BuildingSketch() : filled(true), yaw(45), pitch(25), zoom(0), sh
 
 void BuildingSketch::UpdateBuilding()
 {
-	// TODO: Consider more than the most recent stroke
 	building.polys.clear();
 
 	building.bounds.x = buildingOutline.bounds.x;
@@ -66,7 +65,7 @@ void BuildingSketch::UpdateBuilding()
 			float depth = 0.8f*abs(building.bounds.width);
 
 			float2 previous = outline[0];
-			for (int i = 0; i < outline.size(); i++)
+			for (unsigned i = 0; i < outline.size(); i++)
 			{
 				float2 current = outline[i];
 				polyFront.push_back(float3(current.x, -current.y, depth/2));
@@ -101,7 +100,7 @@ void BuildingSketch::UpdateBuilding()
 				float featureDepth = 0.1f*abs((*s).bounds.width);
 
 				float2 previous = stroke[0];
-				for (int i = 0; i < stroke.size(); i++)
+				for (unsigned i = 0; i < stroke.size(); i++)
 				{
 					float2 current = stroke[i];
 					featurePolyFront.push_back(float3(current.x, -current.y, featureDepth+depth/2));
@@ -195,9 +194,38 @@ void BuildingSketch::UpdateBuilding()
 				int yMax = std::max(previous.y, current.y);
 				int yMin = std::min(previous.y, current.y);
 
-				//assert(yMin != yMax); // TODO: Handle special case
-
 				std::vector< std::vector<float2> > polys2d = Clip(outline, yMin, yMax);
+
+				/*if (yMax == yMin) // If min and max are equal we cannot interpolate height to produce a valid polygon
+				{
+					// Clip has produed a set of degenerate polygons with 4 verts each.
+					// Each one of these represents a horizontal rectangle, so we simply find the depth and generate them.
+					// We don't have to do both front and side because it's the top, we'd get everything twice.
+					// This special case is hilariously bigger than the general algorithm.
+					int minZ = std::min(previous.x, current.x);
+					int maxZ = std::max(previous.x, current.x);
+
+					for (unsigned p = 0; p < polys2d.size(); p++)
+					{
+						const std::vector<float2>& poly2d = polys2d[p];
+						assert(poly2d.size());
+
+						float minX = poly2d[0].x;
+						float maxX = poly2d[0].x;
+						for (unsigned i = 1; i < poly2d.size(); i++)
+						{
+							minX = std::min(minX, poly2d[i].x);
+							maxX = std::max(maxX, poly2d[i].x);
+						}
+						std::vector<float3> polyTop;
+						polyTop.reserve(4);
+						polyTop.push_back(float3(minX, -yMin, minZ));
+						polyTop.push_back(float3(maxX, -yMin, minZ));
+						polyTop.push_back(float3(maxX, -yMin, maxZ));
+						polyTop.push_back(float3(minX, -yMin, maxZ));
+						building.polys.push_back(polyTop);
+					}
+				}*/
 
 				for (unsigned p = 0; p < polys2d.size(); p++)
 				{
@@ -227,7 +255,7 @@ void BuildingSketch::UpdateBuilding()
 void BuildingSketch::ProcessStroke(const Stroke& stroke)
 {
 	strokes.push_back(currentStroke); // Record unprocessed stroke
-	Stroke reduced = Reduce(stroke, 100.0f);
+	Stroke reduced = Reduce(stroke, 30.0f);
 	reducedStrokes.push_back(reduced);
 	
 	// Calculate the bounds of each stroke. The modified and bounded strokes
@@ -445,11 +473,11 @@ void BuildingSketch::RenderLoop()
 			if (Event.Type == sf::Event::KeyPressed)
 			{
 				if (Event.Key.Code == sf::Key::Left)
-					yaw = 0; // TODO: Time based
+					yaw = 0;
 				else if (Event.Key.Code == sf::Key::Right)
 					yaw = 0;
 				else if (Event.Key.Code == sf::Key::Up)
-					pitch = 0; // TODO: Time based
+					pitch = 0;
 				else if (Event.Key.Code == sf::Key::Down)
 					pitch = 0;
 				// Toggle wireframe fill on and off.

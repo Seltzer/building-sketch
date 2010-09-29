@@ -19,31 +19,34 @@ std::vector< std::vector<float2> > Clip(const std::vector<int2>& input, int yMin
 	{
 		int2 current = input[i];
 		// Detect crossing over of range boundaries and insert extra vertices
-		if (previous.y < yMin && current.y >= yMin)
+		// NOTE: It turns out order of these is important. Consider the case where a single edge
+		// comes in the bottom and out the top. We do not want to generate the top vertex first.
+		if (previous.y <= yMin && current.y > yMin)
 		{
 			inBottom.push_back(clipped.size()); // Record current index as entry to range
 			clipped.push_back(cutLine(previous, current, yMin)); // Add vertex at intersection
 		}
-		if (previous.y >= yMin && current.y < yMin)
-		{
-			outBottom.push_back(clipped.size()); // Record current index as exit
-			clipped.push_back(cutLine(previous, current, yMin));
-		}
 
-		if (previous.y > yMax && current.y <= yMax)
-		{
-			inTop.push_back(clipped.size());
-			clipped.push_back(cutLine(previous, current, yMax));
-		}
-			
-		if (previous.y <= yMax && current.y > yMax)
+		if (previous.y < yMax && current.y >= yMax)
 		{
 			outTop.push_back(clipped.size());
 			clipped.push_back(cutLine(previous, current, yMax));
 		}
 
+		if (previous.y >= yMax && current.y < yMax)
+		{
+			inTop.push_back(clipped.size());
+			clipped.push_back(cutLine(previous, current, yMax));
+		}
+
+		if (previous.y > yMin && current.y <= yMin)
+		{
+			outBottom.push_back(clipped.size()); // Record current index as exit
+			clipped.push_back(cutLine(previous, current, yMin));
+		}
+
 		// Record the vertex itself if it is within the range
-		if (current.y >= yMin && current.y <= yMax)
+		if (current.y > yMin && current.y < yMax)
 			clipped.push_back(float2(float(current.x), float(current.y)));
 
 		previous = current;
