@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="dependencies\SFML-1.6\include, dependencies\VirtualTrackball\include"
+				AdditionalIncludeDirectories="dependencies\SFML\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="glu32.lib sfml-system-s-d.lib sfml-window-s-d.lib sfml-graphics-s-d.lib"
+				AdditionalDependencies="opengl32.lib dependencies\OpenGL\glut32.lib glu32.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="dependencies\SFML-1.6\lib"
 				GenerateDebugInformation="true"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="&quot;D:\Programming\SFML-1.6\include&quot;"
+				AdditionalIncludeDirectories="dependencies\SFML\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -136,7 +136,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="glu32.lib sfml-system-s.lib sfml-window-s.lib sfml-graphics-s.lib"
+				AdditionalDependencies="opengl32.lib dependencies\OpenGL\glut32.lib glu32.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;D:\Programming\SFML-1.6\lib&quot;"
 				GenerateDebugInformation="true"
