@@ -23,6 +23,12 @@
 ////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////
+//
+// This is not the original source code - GetWindowHandle() has been added
+////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////
 // Headers
 ////////////////////////////////////////////////////////////
 #define _WIN32_WINDOWS 0x0501
@@ -1124,6 +1130,12 @@ LRESULT CALLBACK WindowImplWin32::GlobalOnEvent(HWND Handle, UINT Message, WPARA
     return HasUnicode ? DefWindowProcW(Handle, Message, WParam, LParam) :
                         DefWindowProcA(Handle, Message, WParam, LParam);
 }
+
+WindowHandle WindowImplWin32::GetWindowHandle()
+{
+	return myHandle;
+}
+
 
 } // namespace priv
 

@@ -1,6 +1,7 @@
 #ifndef BUILDINGSKETCH_H
 #define BUILDINGSKETCH_H
 
+#include <string>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include "Concave.h"
@@ -39,7 +40,17 @@ public:
 	void RandomColor();
 	float3 trackBallMapping(float2 point);
 
-private:
+
+private:		// Private methods
+	
+	// Attempt to change window title - this is currently only possible on a Windows platform
+	// Window title will be set to the argument string prepended by defaultAppString
+	void ChangeWindowTitle(const std::string&);
+
+	// Update title according to building algorithm and parameters
+	void UpdateWindowTitle();
+
+private:		// Private fields
 	// Sketch input
 	Stroke currentStroke, buildingOutline;
 	std::vector<Stroke> strokes, reducedStrokes, polyLines, featureOutlines;
@@ -64,6 +75,7 @@ private:
 	bool filled, showAxis;
 	float yaw, pitch, zoom;
 	int2 dragOrigin;
+	const std::string defaultAppString;
 
 };
 

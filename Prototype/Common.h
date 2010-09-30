@@ -4,6 +4,8 @@
 #define COMMON_H_
 
 #include <vector>
+#include <string>
+#include <sstream>
 #include "Types.h"
 
 
@@ -36,6 +38,14 @@ struct Building
 
 // Utility functions
 float randFloat();
+
+template<typename T>
+std::string ConvertToString(T& arg)
+{
+	std::stringstream ss;
+	ss << arg;
+	return ss.str();
+}
 
 
 

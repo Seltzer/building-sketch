@@ -3,12 +3,18 @@
 #include "BuildingGeneration.h"
 #include "SketchPreprocessing.h"
 
+#ifdef _WIN32
+	// Required for ChangeWindowTitle() since SFML doesn't provide a platform-agnostic way
+	#include "windows.h"
+#endif
+
 using namespace std;
 
 
 
 
-BuildingSketch::BuildingSketch() : filled(true), yaw(45), pitch(25), zoom(0), showAxis(true) 
+BuildingSketch::BuildingSketch() 
+	: filled(true), yaw(45), pitch(25), zoom(0), showAxis(true), defaultAppString("Building Sketch")
 {	
 	windowSize = int2(800, 600);
 	verticalDivision = windowSize.x/2;
@@ -53,10 +59,13 @@ void BuildingSketch::UpdateBuilding()
 	}
 
 
+	if (outline.size() == 0)
+		return;
+
 	switch (buildingAlgorithm)
 	{
 		case EXTRUDE:	// Algorithm to create an extruded building
-		{					
+		{	
 			ExtrudeSketch(building, outline, processedFeatureOutlines);
 			break;
 		}
@@ -241,9 +250,10 @@ void BuildingSketch::DrawOutline(const Poly poly)
 
 void BuildingSketch::RenderLoop()
 {
-	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), "Building Sketch");
+	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), defaultAppString);
 	win->SetActive(true);
 	win->PreserveOpenGLStates(true);
+	ChangeWindowTitle(defaultAppString + " - Extrusion Mode");
 
 	while (win->IsOpened())
 	{
@@ -292,6 +302,42 @@ void BuildingSketch::RandomColor()
 }
 
 
+void BuildingSketch::ChangeWindowTitle(const string& newTitle)
+{
+	#ifdef _WIN32
+		// Hack to get HWND for SFML win
+		HWND windowHandle = (HWND) win->GetWindowHandle();
+		if (!windowHandle)
+			return;
+
+		// Convert newTitle from std::string to wchar_t[]
+		// TODO: This conversion will not work for systems without Unicode support
+        wchar_t convertedTitle[256];
+        int NbChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, newTitle.c_str(), static_cast<int>(newTitle.size()), convertedTitle, sizeof(convertedTitle) / sizeof(*convertedTitle));
+        convertedTitle[NbChars] = L'\0';
+
+		SetWindowText(windowHandle, convertedTitle);
+	#endif
+}
+
+void BuildingSketch::UpdateWindowTitle()
+{
+	string newTitle(defaultAppString);
+
+	switch(buildingAlgorithm)
+	{
+		case EXTRUDE:
+			newTitle.append(" - Extrusion Mode");
+			break;
+		case MIRROR:
+			newTitle.append(" - Mirror Mode");
+			break;
+		case ROTATE:
+			newTitle.append(" - Rotation Mode with arity of " + ConvertToString<int>(rotationCount));
+	}
+
+	ChangeWindowTitle(newTitle);
+}
 
 
 //////////////////////////////////////////////////// Events
@@ -342,12 +388,14 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 		{
 			rotationCount--;
 			rotationCount = (rotationCount<1) ? 1 : rotationCount;
+			UpdateWindowTitle();
 			UpdateBuilding();
 		}
 		// Decrease the rations count for the rotation algorith.
 		else if (Event.Key.Code == sf::Key::Period)
 		{
-			rotationCount++;
+			++rotationCount;
+			UpdateWindowTitle();
 			UpdateBuilding();
 		}
 		// Toggle differnt building render algorithms
@@ -370,10 +418,14 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 					break;
 				}
 			}
+			UpdateWindowTitle();
 			UpdateBuilding();
 		}
 		else if (Event.Key.Code == sf::Key::Space)
+		{
 			ResetStrokes();
+			UpdateBuilding();
+		}
 	}
 
 	if (Event.Type == sf::Event::MouseMoved)
@@ -467,5 +519,4 @@ void BuildingSketch::MouseWheelMoved(int delta)
 		zoom = (zoom<-30.0f) ? -30.0f: zoom;
 	} 
 }
-
 

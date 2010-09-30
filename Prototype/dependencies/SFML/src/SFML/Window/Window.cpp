@@ -470,4 +470,10 @@ void Window::Initialize(priv::WindowImpl* Window)
     OnCreate();
 }
 
+WindowHandle Window::GetWindowHandle()
+{
+	return myWindow->GetWindowHandle();	
+}
+
+
 } // namespace sf
