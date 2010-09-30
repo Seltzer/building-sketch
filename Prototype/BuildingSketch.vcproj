@@ -177,6 +177,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\BuildingGeneration.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\BuildingSketch.cpp"
 				>
 			</File>
@@ -185,11 +189,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Common.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Concave.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\main.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\SketchPreprocessing.cpp"
 				>
 			</File>
 			<File
@@ -211,6 +223,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\BuildingGeneration.h"
+				>
+			</File>
+			<File
 				RelativePath=".\BuildingSketch.h"
 				>
 			</File>
@@ -219,7 +235,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Common.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Concave.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SketchPreprocessing.h"
 				>
 			</File>
 			<File
@@ -230,12 +254,6 @@
 				RelativePath=".\vec.h"
 				>
 			</File>
-		</Filter>
-		<Filter
-			Name="Resource Files"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
-			>
 		</Filter>
 	</Files>
 	<Globals>

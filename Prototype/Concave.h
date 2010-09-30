@@ -5,6 +5,9 @@
 
 #include "Types.h"
 
+
+
+
 // Concave polygon tesselator from:
 // http://www.flipcode.com/archives/Polygon_Tessellation_In_OpenGL.shtml
 class Tess_Poly {
@@ -21,6 +24,8 @@ public:
 	void End_Polygon();
 };
 
-extern Tess_Poly tesselator;
+
+
+
 
 #endif // CONCAVE_H

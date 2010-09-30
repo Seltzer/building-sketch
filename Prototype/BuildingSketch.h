@@ -3,85 +3,68 @@
 
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
-
-#include "Types.h"
-#include "Clip.h"
 #include "Concave.h"
+#include "Types.h"
+#include "Common.h"
+
+
 
 class BuildingSketch
 {
+
 public:	
-	typedef std::vector<float3> Poly;
-	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};
-	enum BUILDING_ALGORITHM { EXTRUDE, ROTATE, MIRROR};
-
-	struct Bounds
-	{
-		int x;
-		int y;
-		int width;
-		int height;
-		int depth;
-	};
-
-	struct Stroke
-	{
-		int length;
-		Bounds bounds;
-		std::vector<int2> points;
-	};
-
-	struct Building
-	{
-		Bounds bounds;
-		std::vector<Poly> polys;
-	};
 	
 	BuildingSketch();
-	std::vector<int2> DouglasPeuker(std::vector<int2>::const_iterator start, std::vector<int2>::const_iterator end, float threshold);
-	Stroke Reduce(const Stroke& stroke, float threshold);
-	void DrawStroke(const Stroke& stroke);
-	float randFloat();
-	void RandomColor();
-	void DrawOutline(const Poly poly);
-	void UpdateBuilding();
+	void RenderLoop();		
+	
+	// Sketch processing/rendering methods
 	void ProcessStroke(const Stroke& stroke);
+	Stroke Reduce(const Stroke& stroke, float threshold);
 	void ResetStrokes();
+	void RenderStrokes();
+	void DrawStroke(const Stroke& stroke);
+
+	// Building update/rendering methods
+	void UpdateBuilding();
+	void RenderBuilding();
+	void DrawOutline(const Poly poly);
+
+	// User input and event-handling
+	void ProcessEvent(sf::Event&);
 	void MousePressed(int2 pos);
 	void MouseReleased(int2 pos);
 	void MouseMoved(int2 pos);
 	void MouseWheelMoved(int delta);
+
+	void RandomColor();
 	float3 trackBallMapping(float2 point);
-	void RenderLines();
-	void RenderBuilding();
-	void RenderLoop();	
 
 private:
-	sf::RenderWindow* win;
-
-	Stroke currentStroke;
-	std::vector<Stroke> strokes;
-	std::vector<Stroke> reducedStrokes;
-	std::vector<Stroke> polyLines;
-	std::vector<Stroke> featureOutlines;
-	Stroke buildingOutline;
-
-	Building building;
+	// Sketch input
+	Stroke currentStroke, buildingOutline;
+	std::vector<Stroke> strokes, reducedStrokes, polyLines, featureOutlines;
+	float maxArea;
+		
+	// Building algorithm selection, algorithm params and Building output
+	enum BUILDING_ALGORITHM { EXTRUDE, ROTATE, MIRROR};
 	BUILDING_ALGORITHM buildingAlgorithm;
 	int rotationCount;
+	bool mirrorSketch;
+	Building building;
 
+	// Windowing / OpenGL stuff
+	sf::RenderWindow* win;
+	Tess_Poly tesselator;
 	int2 windowSize;
 	int verticalDivision;
 
+	// UI stuff
+	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};
 	MOUSE_ACTION mouseAction;
-	bool filled;
-	bool showAxis;
-	bool mirrorSketch;
-	float yaw;
-	float pitch;
-	float zoom;
-	float maxArea;
+	bool filled, showAxis;
+	float yaw, pitch, zoom;
 	int2 dragOrigin;
+
 };
 
 #endif //BUILDINGSKETCH_H

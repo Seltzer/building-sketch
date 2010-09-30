@@ -1,8 +1,7 @@
+#include <iostream>
 #include "Concave.h"
 
-#include <iostream>
 
-Tess_Poly tesselator;
 
 void __stdcall vertexCallback(GLvoid *vertex)
 {
