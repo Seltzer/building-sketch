@@ -72,7 +72,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib &quot;$(SolutionDir)..\..\extlibs\libs-vc2005\freetype.lib&quot;"
+				AdditionalDependencies="opengl32.lib &quot;$(ProjectDir)..\..\extlibs\libs-vc2005\freetype.lib&quot;"
 				OutputFile="$(SolutionDir)..\..\lib\vc2008\$(ProjectName)-d.dll"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories=""
