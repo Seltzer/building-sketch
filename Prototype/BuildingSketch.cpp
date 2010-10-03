@@ -229,6 +229,7 @@ void BuildingSketch::DrawSolid(const Poly poly)
 	if (filled) {
 		glColor3f(0.5f, 0.5f, 0.5f);
 		buildingShader->Enable(true);
+		displacementMap.Bind();
 
 		glNormal3fv(poly.GetNormal().data);
 		glMultiTexCoord3fv(GL_TEXTURE1, poly.GetTangent().data);
@@ -248,6 +249,7 @@ void BuildingSketch::DrawSolid(const Poly poly)
 		}
 		glEnd();
 
+		glDisable(GL_TEXTURE_2D);
 		buildingShader->Enable(false);
 	}
 }
@@ -274,7 +276,8 @@ void BuildingSketch::RenderLoop()
 	win->PreserveOpenGLStates(true);
 	ChangeWindowTitle(defaultAppString + " - Extrusion Mode");
 
-	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Delete
+	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Memory leak
+	displacementMap.LoadFromFile("collage_height.jpg");
 
 	while (win->IsOpened())
 	{

@@ -16,7 +16,7 @@ void main(void)
    
    //  the matrix needed to convert to eye space
    //  (this is local, and should already be normalized, I think)
-   vec3 eyeSpaceTangent  = normalize(gl_NormalMatrix * gl_MultiTexCoord1.xyz);	//tangent;
+   vec3 eyeSpaceTangent  = normalize(gl_NormalMatrix * (-gl_MultiTexCoord1.xyz));	//tangent;
    vec3 eyeSpaceBinormal = normalize(gl_NormalMatrix * (-gl_MultiTexCoord2.xyz));	//binormal;
    vec3 eyeSpaceNormal   = normalize(gl_NormalMatrix * gl_Normal); //normal
    

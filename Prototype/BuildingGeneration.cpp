@@ -37,8 +37,8 @@ void ExtrudeSketch(Building& building, vector<int2>& outline, vector<Stroke>& pr
 		}
 		previous = current;
 	}
-	float2 uvStart(building.bounds.x, building.bounds.y);
-	float2 uvEnd(building.bounds.x + building.bounds.width, building.bounds.y + building.bounds.height);
+	float2 uvStart(-building.bounds.width/2, -building.bounds.height/2);
+	float2 uvEnd(building.bounds.width/2, building.bounds.height/2);
 	Poly f(polyFront);
 	f.SetNormals(float3(0, 0, 1), float3(1, 0, 0), float3(0, 1, 0));
 	f.SetTexMapping(uvStart, uvEnd);

@@ -71,6 +71,7 @@ private:		// Private fields
 	int verticalDivision;
 
 	Shader* buildingShader;
+	sf::Image displacementMap; // TODO: Generate this from features
 
 	// UI stuff
 	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};
