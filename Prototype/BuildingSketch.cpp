@@ -1,7 +1,9 @@
 #include <iostream>
+#include <SFML/Graphics/GraphicsContext.hpp>
 #include "BuildingSketch.h"
 #include "BuildingGeneration.h"
 #include "SketchPreprocessing.h"
+#include "Shader.h"
 
 #ifdef _WIN32
 	// Required for ChangeWindowTitle() since SFML doesn't provide a platform-agnostic way
@@ -194,6 +196,7 @@ void BuildingSketch::RenderBuilding()
 	glColor3f(0.0f, 1.0f, 0.0f);
 	for (std::vector<Poly>::iterator p = building.polys.begin(); p != building.polys.end(); p++)
 	{
+		DrawSolid(*p);
 		DrawOutline(*p);
 	}
 
@@ -220,25 +223,41 @@ void BuildingSketch::RenderBuilding()
 	glEnd();*/
 }
 
-void BuildingSketch::DrawOutline(const Poly poly)
+void BuildingSketch::DrawSolid(const Poly poly)
 {
-	glColor3f(0.5f, 0.5f, 0.5f);
-	/*RandomColor();
-	glBegin(GL_POLYGON); // Draw raw stroke as line strip
-		for (std::vector<float3>::const_iterator v = poly.begin(); v != poly.end(); v++)
-			glVertex3f(v->x, -v->y, v->z);
-	glEnd();*/
 	glDisable(GL_CULL_FACE);
 	if (filled) {
-		tesselator.Begin_Polygon();
-		tesselator.Render_Contour(poly);
-		tesselator.End_Polygon();
-	}
+		glColor3f(0.5f, 0.5f, 0.5f);
+		buildingShader->Enable(true);
 
+		glNormal3fv(poly.GetNormal().data);
+		glMultiTexCoord3fv(GL_TEXTURE1, poly.GetTangent().data);
+		glMultiTexCoord3fv(GL_TEXTURE2, poly.GetBitangent().data);
+
+		// TODO: Support texturing with the tesselator. And make it a one shot process while you're about it
+		/*tesselator.Begin_Polygon();
+		tesselator.Render_Contour(poly.GetVerts());
+		tesselator.End_Polygon();*/
+
+		glBegin(GL_POLYGON); // Draw raw stroke as line strip
+		for (std::vector<float3>::const_iterator v = poly.GetVerts().begin(); v != poly.GetVerts().end(); v++)
+		{
+			float2 uv = poly.GetTexCoords(*v);
+			glTexCoord2fv(uv.data);
+			glVertex3f(v->x, v->y, v->z);
+		}
+		glEnd();
+
+		buildingShader->Enable(false);
+	}
+}
+
+void BuildingSketch::DrawOutline(const Poly poly)
+{
 	glColor3f(1.0f, 0.0f, 0.0f);
 	//RandomColor();
 	glBegin(GL_LINE_LOOP); // Draw raw stroke as line loop
-		for (std::vector<float3>::const_iterator v = poly.begin(); v != poly.end(); v++)
+		for (std::vector<float3>::const_iterator v = poly.GetVerts().begin(); v != poly.GetVerts().end(); v++)
 		{
 			//glColor3f(1.0f, (v - poly.begin()) / (poly.size() - 1), 0.0f);
 			glVertex3f(v->x, v->y, v->z);
@@ -250,10 +269,12 @@ void BuildingSketch::DrawOutline(const Poly poly)
 
 void BuildingSketch::RenderLoop()
 {
-	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), defaultAppString);
+	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), defaultAppString, sf::Style::Resize|sf::Style::Close);
 	win->SetActive(true);
 	win->PreserveOpenGLStates(true);
 	ChangeWindowTitle(defaultAppString + " - Extrusion Mode");
+
+	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Delete
 
 	while (win->IsOpened())
 	{
@@ -519,4 +540,3 @@ void BuildingSketch::MouseWheelMoved(int delta)
 		zoom = (zoom<-30.0f) ? -30.0f: zoom;
 	} 
 }
-

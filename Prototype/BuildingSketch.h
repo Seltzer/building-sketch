@@ -8,7 +8,7 @@
 #include "Types.h"
 #include "Common.h"
 
-
+class Shader;
 
 class BuildingSketch
 {
@@ -29,6 +29,7 @@ public:
 	void UpdateBuilding();
 	void RenderBuilding();
 	void DrawOutline(const Poly poly);
+	void DrawSolid(const Poly poly);
 
 	// User input and event-handling
 	void ProcessEvent(sf::Event&);
@@ -68,6 +69,8 @@ private:		// Private fields
 	Tess_Poly tesselator;
 	int2 windowSize;
 	int verticalDivision;
+
+	Shader* buildingShader;
 
 	// UI stuff
 	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};

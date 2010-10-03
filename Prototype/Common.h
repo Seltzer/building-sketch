@@ -7,11 +7,7 @@
 #include <string>
 #include <sstream>
 #include "Types.h"
-
-
-
-typedef std::vector<float3> Poly;
-
+#include "Poly.h"
 
 struct Bounds
 {

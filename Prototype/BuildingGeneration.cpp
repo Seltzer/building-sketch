@@ -37,8 +37,16 @@ void ExtrudeSketch(Building& building, vector<int2>& outline, vector<Stroke>& pr
 		}
 		previous = current;
 	}
-	building.polys.push_back(polyFront);
-	building.polys.push_back(polyBack);
+	float2 uvStart(building.bounds.x, building.bounds.y);
+	float2 uvEnd(building.bounds.x + building.bounds.width, building.bounds.y + building.bounds.height);
+	Poly f(polyFront);
+	f.SetNormals(float3(0, 0, 1), float3(1, 0, 0), float3(0, 1, 0));
+	f.SetTexMapping(uvStart, uvEnd);
+	building.polys.push_back(f);
+	Poly b(polyBack);
+	b.SetNormals(float3(0, 0, -1), float3(1, 0, 0), float3(0, 1, 0)); // Tangents same because tex coords same
+	b.SetTexMapping(uvStart, uvEnd);
+	building.polys.push_back(b);
 
 	// Work out the feature polygons
 	for (std::vector<Stroke>::iterator s = processedFeatureOutlines.begin();
@@ -155,7 +163,7 @@ void MirrorSketch(Building& building, vector<int2>& outline)
 
 		std::vector< std::vector<float2> > polys2d = Clip(outline, yMin, yMax);
 
-		/*if (yMax == yMin) // If min and max are equal we cannot interpolate height to produce a valid polygon
+		if (yMax == yMin) // If min and max are equal we cannot interpolate height to produce a valid polygon
 		{
 			// Clip has produed a set of degenerate polygons with 4 verts each.
 			// Each one of these represents a horizontal rectangle, so we simply find the depth and generate them.
@@ -184,7 +192,7 @@ void MirrorSketch(Building& building, vector<int2>& outline)
 				polyTop.push_back(float3(minX, -yMin, maxZ));
 				building.polys.push_back(polyTop);
 			}
-		}*/
+		}
 
 		for (unsigned p = 0; p < polys2d.size(); p++)
 		{

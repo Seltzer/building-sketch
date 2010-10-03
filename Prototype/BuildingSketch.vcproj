@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="dependencies\SFML\include"
+				AdditionalIncludeDirectories="dependencies\SFML\include;dependencies\SFML\src"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -61,9 +61,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib dependencies\OpenGL\glut32.lib glu32.lib"
+				AdditionalDependencies="opengl32.lib glut32.lib glu32.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="dependencies\SFML-1.6\lib"
+				AdditionalLibraryDirectories="dependencies\OpenGL"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="dependencies\SFML\include"
+				AdditionalIncludeDirectories="dependencies\SFML\include;dependencies\SFML\src"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -136,9 +136,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib dependencies\OpenGL\glut32.lib glu32.lib"
+				AdditionalDependencies="opengl32.lib glut32.lib glu32.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;D:\Programming\SFML-1.6\lib&quot;"
+				AdditionalLibraryDirectories="dependencies\OpenGL"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -201,6 +201,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Shader.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\SketchPreprocessing.cpp"
 				>
 			</File>
@@ -240,6 +244,14 @@
 			</File>
 			<File
 				RelativePath=".\Concave.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Poly.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Shader.h"
 				>
 			</File>
 			<File
