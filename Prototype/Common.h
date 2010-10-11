@@ -23,6 +23,8 @@ struct Stroke
 	int length;
 	Bounds bounds;
 	std::vector<int2> points;
+
+	void CalculateBounds();
 };
 
 struct Building
