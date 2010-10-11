@@ -37,6 +37,7 @@ void ExtrudeSketch(Building& building, vector<int2>& outline, vector<Stroke>& pr
 		}
 		previous = current;
 	}
+
 	float2 uvStart(-building.bounds.width/2, -building.bounds.height/2);
 	float2 uvEnd(building.bounds.width/2, building.bounds.height/2);
 	Poly f(polyFront);
@@ -152,6 +153,9 @@ void RotateSketch(Building& building, std::vector<int2>& outline, int rotationCo
 
 void MirrorSketch(Building& building, vector<int2>& outline)
 {
+	float2 uvStart(-building.bounds.width/2, -building.bounds.height/2);
+	float2 uvEnd(building.bounds.width/2, building.bounds.height/2);
+
 	// Magic... TODO: Proper comments
 	int2 previous = outline[0];
 	for (unsigned i = 1; i < outline.size(); i++)
@@ -198,19 +202,33 @@ void MirrorSketch(Building& building, vector<int2>& outline)
 		{
 			const std::vector<float2>& poly2d = polys2d[p];
 
-			std::vector<float3> polyFront;
-			polyFront.reserve(poly2d.size());
-			std::vector<float3> polySide;
-			polySide.reserve(poly2d.size());
+			std::vector<float3> front;
+			front.reserve(poly2d.size());
+			std::vector<float3> side;
+			side.reserve(poly2d.size());
 			for (unsigned j = 0; j < poly2d.size(); j++)
 			{
 				float2 p2d = poly2d[j];
 				// Interpolate based on y coordinate
 				float z = previous.x + float(p2d.y - previous.y) / (current.y - previous.y) * (current.x - previous.x);
-				polyFront.push_back(float3(p2d.x, -p2d.y, z));
-				polySide.push_back(float3(z, -p2d.y, p2d.x));
+				front.push_back(float3(p2d.x, -p2d.y, z));
+				side.push_back(float3(z, -p2d.y, p2d.x));
 			}
+
+			float3 frontTangent(1, 0, 0);
+			float3 frontBinormal = normal(float3(0, current.y - previous.y, previous.x - current.x));
+			float3 frontNormal = cross(frontTangent, frontBinormal);
+			Poly polyFront(front);
+			polyFront.SetNormals(frontNormal, frontTangent, frontBinormal);
+			polyFront.SetTexMapping(uvStart, uvEnd);
 			building.polys.push_back(polyFront);
+
+			float3 sideTangent(0, 0, 1);
+			float3 sideBinormal = normal(float3(current.x - previous.x, previous.y - current.y, 0));
+			float3 sideNormal = cross(sideTangent, sideBinormal);
+			Poly polySide(side);
+			polySide.SetNormals(sideNormal, sideTangent, sideBinormal);
+			polySide.SetTexMapping(uvStart, uvEnd);
 			building.polys.push_back(polySide);
 		}
 		previous = current;

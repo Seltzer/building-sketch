@@ -267,6 +267,18 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="Shaders"
+			>
+			<File
+				RelativePath=".\displacement.frag"
+				>
+			</File>
+			<File
+				RelativePath=".\displacement.vert"
+				>
+			</File>
+		</Filter>
 	</Files>
 	<Globals>
 	</Globals>
