@@ -9,13 +9,14 @@
 #include "Types.h"
 #include "Poly.h"
 
+
+#define DEBUGGING
+
+
 struct Bounds
 {
-	int x;
-	int y;
-	int width;
-	int height;
-	int depth;
+	int x, y;
+	int width, height, depth;
 };
 
 struct Stroke
@@ -25,6 +26,17 @@ struct Stroke
 	std::vector<int2> points;
 
 	void CalculateBounds();
+};
+
+struct LineOfSymmetry
+{
+	int2 pointOnLine;
+	// Unit-vectors for direction and perpendicular direction (direction rotated CCW by 0.5pi)
+	float2 direction, perpDirection;
+
+	LineOfSymmetry();
+	// For debugging
+	std::string ToString();
 };
 
 struct Building

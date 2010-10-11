@@ -16,28 +16,21 @@ using namespace std;
 
 
 BuildingSketch::BuildingSketch() 
-	: filled(true), yaw(45), pitch(25), zoom(0), showAxis(true), defaultAppString("Building Sketch"), los(0,0), losDir(0,0)
+	: maxArea(0), buildingAlgorithm(EXTRUDE), rotationCount(8), mirrorSketch(false), filled(true), yaw(45), pitch(25), zoom(0), 
+			windowSize(800, 600), mouseAction(NONE), showAxis(true), defaultAppString("Building Sketch")
 {	
-	windowSize = int2(800, 600);
 	verticalDivision = windowSize.x/2;
-	mouseAction = NONE;
-	buildingAlgorithm = EXTRUDE;
-	mirrorSketch = false;
-	rotationCount = 8;
-	maxArea = 0;
 }
 
 void BuildingSketch::UpdateBuilding()
 {
 	building.polys.clear();
 
-	building.bounds.x = buildingOutline.bounds.x;
-	building.bounds.y = buildingOutline.bounds.y;
-	building.bounds.width = buildingOutline.bounds.width;
-	building.bounds.height = buildingOutline.bounds.height;
+	// Building bounds are the same as sketch bounds, possibly apart from the depth
+	building.bounds = buildingOutline.bounds;
 	building.bounds.depth = (buildingAlgorithm == EXTRUDE) ? 0 : buildingOutline.bounds.width;
 
-	std::vector<int2> outline = buildingOutline.points;
+	vector<int2> outline = buildingOutline.points;
 	// Move the building's center to the origin.
 	int x_dif = building.bounds.x + (building.bounds.width/2);
 	int y_dif = building.bounds.y + (building.bounds.height/2);
@@ -48,8 +41,8 @@ void BuildingSketch::UpdateBuilding()
 	}
 
 	// Move the feature outlines accordingly
-	std::vector<Stroke> processedFeatureOutlines;
-	for (std::vector<Stroke>::iterator s = featureOutlines.begin(); s != featureOutlines.end(); s++)
+	vector<Stroke> processedFeatureOutlines;
+	for (vector<Stroke>::iterator s = featureOutlines.begin(); s != featureOutlines.end(); s++)
 	{
 		Stroke stroke = (*s);
 		for (unsigned i = 0; i < stroke.points.size(); i++)
@@ -118,8 +111,12 @@ void BuildingSketch::ResetStrokes()
 	reducedStrokes.clear();		
 	polyLines.clear();
 	featureOutlines.clear();
+	mirroredStroke1.points.clear();
+	mirroredStroke2.points.clear();
+
 	buildingOutline = Stroke();	
 	currentStroke = Stroke();
+	los = LineOfSymmetry();
 	maxArea = 0;
 }
 
@@ -128,7 +125,7 @@ Stroke BuildingSketch::Reduce(const Stroke& stroke, float threshold)
 {
 	if (stroke.points.size() <= 2)
 		return stroke; // Cannot reduce any further
-	std::vector<int2> result = DouglasPeuker(stroke.points.begin(), stroke.points.end() - 1, threshold);
+	vector<int2> result = DouglasPeuker(stroke.points.begin(), stroke.points.end() - 1, threshold);
 	result.push_back(stroke.points.back()); // The recursion will never insert the last point.
 	Stroke final;
 	final.length = stroke.points.size();
@@ -149,7 +146,7 @@ void BuildingSketch::RenderStrokes()
 
 	// Draw raw strokes
 	glColor3f(0, 0, 0);
-	for (std::vector<Stroke>::iterator s = strokes.begin(); s != strokes.end(); s++)
+	for (vector<Stroke>::iterator s = strokes.begin(); s != strokes.end(); s++)
 	{
 		DrawStroke(*s);
 	}
@@ -157,34 +154,27 @@ void BuildingSketch::RenderStrokes()
 
 	// Draw processed reduced strokes
 	glColor3f(1, 0, 0);
-	for (std::vector<Stroke>::iterator s = reducedStrokes.begin(); s != reducedStrokes.end(); s++)
+	for (vector<Stroke>::iterator s = reducedStrokes.begin(); s != reducedStrokes.end(); s++)
 	{
 		DrawStroke(*s);
 	}
 
-	// Draw mirroredStroke1 in blue
+	// Draw mirroredStroke1 in blue and mirroredStroke2 in some other colour - these exist for symmetry testing purposes
 	glColor3f(0,0,1);
 	DrawStroke(mirroredStroke1);
-
-	// Draw mirroredStroke2 in some other colour
 	glColor3f(0,0.5,0.6);
 	DrawStroke(mirroredStroke2);
 
-	// Draw symmetrisedStroke in another col
-	glColor3f(0,0.2,0.2);
-	DrawStroke(symmetrisedStroke);
-
-
 	// Draw line of symmetry in green
-	if (los.x == 0 && los.y == 0)
+	if (los.pointOnLine.x == 0 && los.pointOnLine.y == 0)
 		return; 
 
-	int2 losEnd = los + 500 * losDir;
+	int2 losEnd = los.pointOnLine + 500 * los.direction;
 
 	glColor3f(0, 1, 0);
 
 	glBegin(GL_LINES);
-		glVertex2f(los.x, los.y);
+		glVertex2f(los.pointOnLine.x, los.pointOnLine.y);
 		glVertex2f(losEnd.x, losEnd.y);
 	glEnd();
 
@@ -193,7 +183,7 @@ void BuildingSketch::RenderStrokes()
 void BuildingSketch::DrawStroke(const Stroke& stroke)
 {
 	glBegin(GL_LINE_STRIP); // Draw raw stroke as line strip
-		for (std::vector<int2>::const_iterator v = stroke.points.begin(); v != stroke.points.end(); v++)
+		for (vector<int2>::const_iterator v = stroke.points.begin(); v != stroke.points.end(); v++)
 			glVertex2iv(v->data);
 	glEnd();
 }
@@ -207,7 +197,7 @@ void BuildingSketch::DrawStroke(const Stroke& stroke)
 void BuildingSketch::RenderBuilding()
 {
 	glColor3f(0.0f, 1.0f, 0.0f);
-	for (std::vector<Poly>::iterator p = building.polys.begin(); p != building.polys.end(); p++)
+	for (vector<Poly>::iterator p = building.polys.begin(); p != building.polys.end(); p++)
 	{
 		DrawSolid(*p);
 		DrawOutline(*p);
@@ -231,7 +221,7 @@ void BuildingSketch::RenderBuilding()
 	}
 
 	/*glBegin(GL_LINE_STRIP); // Draw raw stroke as line strip
-	for (std::vector<float2>::const_iterator v = clipped.begin(); v != clipped.end(); v++)
+	for (vector<float2>::const_iterator v = clipped.begin(); v != clipped.end(); v++)
 	glVertex3f(v->x, -v->y, 0);
 	glEnd();*/
 }
@@ -254,7 +244,7 @@ void BuildingSketch::DrawSolid(const Poly poly)
 		tesselator.End_Polygon();*/
 
 		glBegin(GL_POLYGON); // Draw raw stroke as line strip
-		for (std::vector<float3>::const_iterator v = poly.GetVerts().begin(); v != poly.GetVerts().end(); v++)
+		for (vector<float3>::const_iterator v = poly.GetVerts().begin(); v != poly.GetVerts().end(); v++)
 		{
 			float2 uv = poly.GetTexCoords(*v);
 			glTexCoord2fv(uv.data);
@@ -272,11 +262,10 @@ void BuildingSketch::DrawOutline(const Poly poly)
 	glColor3f(1.0f, 0.0f, 0.0f);
 	//RandomColor();
 	glBegin(GL_LINE_LOOP); // Draw raw stroke as line loop
-		for (std::vector<float3>::const_iterator v = poly.GetVerts().begin(); v != poly.GetVerts().end(); v++)
+		for (vector<float3>::const_iterator v = poly.GetVerts().begin(); v != poly.GetVerts().end(); v++)
 		{
 			//glColor3f(1.0f, (v - poly.begin()) / (poly.size() - 1), 0.0f);
 			glVertex3f(v->x, v->y, v->z);
-			
 		}
 	glEnd();
 }
@@ -347,7 +336,7 @@ void BuildingSketch::ChangeWindowTitle(const string& newTitle)
 		if (!windowHandle)
 			return;
 
-		// Convert newTitle from std::string to wchar_t[]
+		// Convert newTitle from string to wchar_t[]
 		// TODO: This conversion will not work for systems without Unicode support
         wchar_t convertedTitle[256];
         int NbChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, newTitle.c_str(), static_cast<int>(newTitle.size()), convertedTitle, sizeof(convertedTitle) / sizeof(*convertedTitle));
@@ -377,112 +366,6 @@ void BuildingSketch::UpdateWindowTitle()
 }
 
 
-
-
-bool BuildingSketch::PointExistsAt(const std::vector<int2>& positions)
-{
-	// Iterate over all strokes
-	for (vector<Stroke>::iterator it = strokes.begin(); it < strokes.end(); it++)
-	{
-		// Iterate over points of each stroke
-		for (vector<int2>::iterator it2 = (*it).points.begin(); it2 < (*it).points.end(); it2++)
-		{
-			int2& point = (*it2);
-
-			for (vector<int2>::const_iterator it3 = positions.begin(); it3 < positions.end(); it3++)
-			{	
-				if (point == *it3)
-					return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-
-void BuildingSketch::CalculateSymmetry()
-{
-	// Define parameters for a line of symmetry
-	// For now, line of symmetry begins above the midpoint of the top line of the outline bounds
-	los = int2(buildingOutline.bounds.x + buildingOutline.bounds.width / 2, buildingOutline.bounds.y);
-
-	// Assume a direction for the los
-	losDir = float2(0,1);
-	//losDir = float2(0.4,1);
-	losDir = normal(losDir);
-
-	// Find vector which is perpendicular to los (rotated CCW by pi)
-	float2 losPerp = float2(-losDir.y, losDir.x);
-
-	cout << "********** los = " << los.tostring() << endl;
-	cout << "********** losDir = " << losDir.tostring() << endl;
-	cout << "********** losPerp = " << losPerp.tostring() << endl;
-	
-	cout << "# stroke points = " << strokes[0].points.size() << endl;
-	cout << "# reduced stroke points = " << reducedStrokes[0].points.size() << endl;
-
-
-	// Calculate distance from origin to line of symmetry
-	// This is the projection of the los position vector on losPerp
-	float distanceFromOrigin = fabs((float) dot(los,losPerp));
-	cout << "Distance of los from origin is " << distanceFromOrigin << endl;
-	
-
-	mirroredStroke1.points.clear();
-	mirroredStroke2.points.clear();
-	symmetrisedStroke.points.clear();
-
-	// Iterate over all strokes
-	for (vector<Stroke>::iterator it = strokes.begin(); it < strokes.end(); it++)
-	{
-		// Iterate over points of each stroke
-		for (vector<int2>::iterator it2 = (*it).points.begin(); it2 < (*it).points.end(); it2++)
-		{
-			// For current point p:
-			float2 p = *it2;
-			symmetrisedStroke.points.push_back(p);
-			cout << "p = " << p.tostring() << endl;
-		
-			// Calculate magnitude of projection of p (the point's position vector) on LOS
-			int d1 = fabs((float) dot(p, losPerp));
-			cout << "d1 = " << d1 << endl;
-
-			float realDistance = d1 - distanceFromOrigin;
-			cout << "d = " << fabs(realDistance) << endl;
-
-			
-
-			float2 counterpart = p + losPerp * realDistance * 2;
-
-			cout << "counterpart = " << counterpart.tostring() << endl;
-			
-			if (realDistance < 0)
-				mirroredStroke1.points.push_back(int2((int)counterpart.x, (int) counterpart.y));
-			else if (realDistance > 0)
-				mirroredStroke2.points.push_back(int2((int)counterpart.x, (int) counterpart.y));
-
-			cout << "\n" << endl;
-
-		}
-	}
-
-	cout << "********** los = " << los.tostring() << endl;
-	cout << "********** losDir = " << losDir.tostring() << endl;
-	cout << "********** losPerp = " << losPerp.tostring() << endl;
-	
-	cout << "# stroke points = " << strokes[0].points.size() << endl;
-	cout << "# reduced stroke points = " << reducedStrokes[0].points.size() << endl;
-
-	cout << "Distance of los from origin is " << distanceFromOrigin << endl;
-	
-
-}
-
-	
-
-
-
 //////////////////////////////////////////////////// Events
 void BuildingSketch::ProcessEvent(sf::Event& Event)
 {
@@ -500,19 +383,13 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 	if (Event.Type == sf::Event::Closed)
 		win->Close();
 
-	// Escape key pressed
-	if ((Event.Type == sf::Event::KeyPressed) && (Event.Key.Code == sf::Key::Escape))
-		win->Close();
-
 	if (Event.Type == sf::Event::KeyPressed)
 	{
-		if (Event.Key.Code == sf::Key::Left)
+		if (Event.Key.Code == sf::Key::Escape)
+			win->Close();
+		else if (Event.Key.Code == sf::Key::Left || Event.Key.Code == sf::Key::Right)
 			yaw = 0;
-		else if (Event.Key.Code == sf::Key::Right)
-			yaw = 0;
-		else if (Event.Key.Code == sf::Key::Up)
-			pitch = 0;
-		else if (Event.Key.Code == sf::Key::Down)
+		else if (Event.Key.Code == sf::Key::Up || Event.Key.Code == sf::Key::Down)
 			pitch = 0;
 		// Toggle wireframe fill on and off.
 		else if (Event.Key.Code == sf::Key::W)
@@ -526,11 +403,10 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 			mirrorSketch = !mirrorSketch;
 			UpdateBuilding();
 		}
-		// symmetry
+		// Do symmetry related stuff
 		else if (Event.Key.Code == sf::Key::S)
 		{
-			CalculateSymmetry();
-			//UpdateBuilding();
+			los = CalculateSymmetry(strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
 		}
 		// Increase the rations count for the rotation algorith.
 		else if (Event.Key.Code == sf::Key::Comma)

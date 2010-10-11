@@ -1,5 +1,7 @@
 #include "Common.h"
+#include <sstream>
 
+using namespace std;
 
 
 float randFloat()
@@ -26,4 +28,22 @@ void Stroke::CalculateBounds(void)
 	bounds.width = abs(maxCoords.x - minCoords.x);
 	bounds.height = abs(maxCoords.y - minCoords.y);
 	bounds.depth = 0;
+}
+
+
+
+LineOfSymmetry::LineOfSymmetry()
+	: pointOnLine(0,0), direction(0,0), perpDirection(0,0)
+{
+}
+
+
+string LineOfSymmetry::ToString()
+{
+	stringstream ss;
+	ss << "********** pointOnLine = " << pointOnLine.tostring() << "\n";
+	ss << "********** direction = " << direction.tostring() << "\n";
+	ss << "********** perpDirection = " << perpDirection.tostring() << "\n";
+
+	return ss.str();
 }

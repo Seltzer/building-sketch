@@ -5,7 +5,6 @@
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include "Concave.h"
-#define VEC_TOSTRING
 #include "Types.h"
 #include "Common.h"
 
@@ -22,7 +21,6 @@ public:
 	// Sketch processing/rendering methods
 	void ProcessStroke(const Stroke& stroke);
 	Stroke Reduce(const Stroke& stroke, float threshold);
-	void CalculateSymmetry();
 	void ResetStrokes();
 	void RenderStrokes();
 	void DrawStroke(const Stroke& stroke);
@@ -53,19 +51,15 @@ private:		// Private methods
 	// Update title according to building algorithm and parameters
 	void UpdateWindowTitle();
 
-	bool PointExistsAt(const std::vector<int2>&);
-
 private:		// Private fields
 	// Sketch input
 	Stroke currentStroke, buildingOutline;
 	std::vector<Stroke> strokes, reducedStrokes, polyLines, featureOutlines;
 	float maxArea;
 
-	// A point on the line of symmetry
-	int2 los;
-	// Directional unit vector of line of symmetry
-	float2 losDir;
-	Stroke symmetrisedStroke, mirroredStroke1, mirroredStroke2;
+	// Symmetry stuff
+	LineOfSymmetry los;							// last line of symmetry which was calculated
+	Stroke mirroredStroke1, mirroredStroke2;	// these two are for testing symmetry
 		
 	// Building algorithm selection, algorithm params and Building output
 	enum BUILDING_ALGORITHM { EXTRUDE, ROTATE, MIRROR};
