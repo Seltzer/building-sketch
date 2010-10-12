@@ -38,15 +38,15 @@ void ExtrudeSketch(Building& building, vector<int2>& outline, vector<Stroke>& pr
 		previous = current;
 	}
 
-	float2 uvStart(-building.bounds.width/2, -building.bounds.height/2);
-	float2 uvEnd(building.bounds.width/2, building.bounds.height/2);
+	float2 uvStart(-building.bounds.width/2.0f, -building.bounds.height/2.0f);
+	float2 uvEnd(building.bounds.width/2.0f, building.bounds.height/2.0f);
 	Poly f(polyFront);
 	f.SetNormals(float3(0, 0, 1), float3(1, 0, 0), float3(0, 1, 0));
-	f.SetTexMapping(uvStart, uvEnd);
+	f.SetTexMapping(float3(1, 0, 0), float3(0, 1, 0), uvStart, uvEnd);
 	building.polys.push_back(f);
 	Poly b(polyBack);
 	b.SetNormals(float3(0, 0, -1), float3(1, 0, 0), float3(0, 1, 0)); // Tangents same because tex coords same
-	b.SetTexMapping(uvStart, uvEnd);
+	b.SetTexMapping(float3(0, 0, 1), float3(0, 1, 0), uvStart, uvEnd);
 	building.polys.push_back(b);
 
 	// Work out the feature polygons
@@ -216,19 +216,25 @@ void MirrorSketch(Building& building, vector<int2>& outline)
 			}
 
 			float3 frontTangent(1, 0, 0);
-			float3 frontBinormal = normal(float3(0, current.y - previous.y, previous.x - current.x));
-			float3 frontNormal = cross(frontTangent, frontBinormal);
+			float3 frontBinormal = normal(float3(0.0f, current.y - previous.y, previous.x - current.x));
+			if (frontBinormal.y < 0)
+				frontBinormal = -frontBinormal;
+			float3 frontNormal = normal(float3(0.0f, current.x - previous.x, current.y - previous.y)); // at 90 deg to binormal
+			//float3 frontNormal = cross(frontTangent, frontBinormal);
 			Poly polyFront(front);
 			polyFront.SetNormals(frontNormal, frontTangent, frontBinormal);
-			polyFront.SetTexMapping(uvStart, uvEnd);
+			polyFront.SetTexMapping(float3(1, 0, 0), float3(0, 1, 0), uvStart, uvEnd);
 			building.polys.push_back(polyFront);
 
 			float3 sideTangent(0, 0, 1);
-			float3 sideBinormal = normal(float3(current.x - previous.x, previous.y - current.y, 0));
-			float3 sideNormal = cross(sideTangent, sideBinormal);
+			float3 sideBinormal = normal(float3(current.x - previous.x, previous.y - current.y, 0.0f));
+			if (sideBinormal.y < 0)
+				sideBinormal = -sideBinormal;
+			float3 sideNormal = normal(float3(current.y - previous.y, current.x - previous.x, 0.0f));
+			//float3 sideNormal = cross(sideTangent, sideBinormal);
 			Poly polySide(side);
 			polySide.SetNormals(sideNormal, sideTangent, sideBinormal);
-			polySide.SetTexMapping(uvStart, uvEnd);
+			polySide.SetTexMapping(float3(0, 0, 1), float3(0, 1, 0), uvStart, uvEnd);
 			building.polys.push_back(polySide);
 		}
 		previous = current;

@@ -30,15 +30,17 @@ public:
 
 	// Texture mapping is assumed to be uniform, tangent and bitangent define the orientation
 	// of the mapping already, we just need to know how far along the axis the texture starts and ends
-	void SetTexMapping(float2 start, float2 end)
+	void SetTexMapping(float3 xDir, float3 yDir, float2 start, float2 end)
 	{
+		this->xDir = xDir;
+		this->yDir = yDir;
 		this->start = start;
 		this->end = end;
 	}
 	float2 GetTexCoords(float3 pos) const
 	{
 		float2 scale = end - start;
-		float2 projected(dot(pos, tangent), dot(pos, bitangent)); // Convert to texture space
+		float2 projected(dot(pos, xDir), dot(pos, yDir)); // Convert to texture space
 		return (projected - start) / scale; // Rescale
 	}
 private:
@@ -46,6 +48,8 @@ private:
 	float3 normal;
 	float3 tangent;
 	float3 bitangent;
+	float3 xDir;
+	float3 yDir;
 	float2 start;
 	float2 end;
 };

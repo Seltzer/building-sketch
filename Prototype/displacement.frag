@@ -16,8 +16,8 @@ void main()
 	//gl_FragColor = vec4(bright, bright, bright, 1);
 	//gl_FragColor = vec4(texCoord.xy, 0, 1);
 	//gl_FragColor = texture2D(stepmap, texCoord) * bright;
-	//glFragColor = texture2D(reliefmap, texCoord);
-	
+	//gl_FragColor = texture2D(reliefmap, texCoord);
+	//return;
 	
 	float depth = 0.05; // Adjust scale of displacement
 	
