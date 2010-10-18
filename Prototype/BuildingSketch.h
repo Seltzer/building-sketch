@@ -76,6 +76,7 @@ private:		// Private fields
 
 	Shader* buildingShader;
 	sf::Image displacementMap; // TODO: Generate this from features
+	sf::Image normalMap;
 
 	// UI stuff
 	enum MOUSE_ACTION { NONE, DRAWING, TRACKING};

@@ -7,17 +7,19 @@ varying vec2 texCoord;
 varying vec3 vertex_pos;
 varying float vertex_dist;
 varying vec3 normal;
-
+varying vec3 lightDir;
 
 void main(void)
 {
    // location of the vertex in eye space
    vec3 eyeSpaceVert = (gl_ModelViewMatrix * gl_Vertex).xyz;
    
+   vec3 eyeSpaceLightDir = (gl_ModelViewMatrix * vec4(0.707, 0.707, 0.0, 0.0)).xyz;
+   
    //  the matrix needed to convert to eye space
    //  (this is local, and should already be normalized, I think)
-   vec3 eyeSpaceTangent  = normalize(gl_NormalMatrix * (-gl_MultiTexCoord1.xyz));	//tangent;
-   vec3 eyeSpaceBinormal = normalize(gl_NormalMatrix * (-gl_MultiTexCoord2.xyz));	//binormal;
+   vec3 eyeSpaceTangent  = normalize(gl_NormalMatrix * (gl_MultiTexCoord1.xyz));	//tangent;
+   vec3 eyeSpaceBinormal = normalize(gl_NormalMatrix * (gl_MultiTexCoord2.xyz));	//binormal;
    vec3 eyeSpaceNormal   = normalize(gl_NormalMatrix * gl_Normal); //normal
    
    normal = eyeSpaceNormal;
@@ -27,6 +29,10 @@ void main(void)
         dot (eyeSpaceTangent, eyeSpaceVert),
         dot (eyeSpaceBinormal, eyeSpaceVert),
         dot (eyeSpaceNormal, eyeSpaceVert));
+   lightDir = normalize(vec3 (
+        dot (eyeSpaceTangent, eyeSpaceLightDir),
+        dot (eyeSpaceBinormal, eyeSpaceLightDir),
+        dot (eyeSpaceNormal, eyeSpaceLightDir)));
 
    vertex_dist = length (eyeSpaceVert);
    texCoord   = gl_MultiTexCoord0.xy;

@@ -247,6 +247,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\HeightmapProcessing.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Poly.h"
 				>
 			</File>

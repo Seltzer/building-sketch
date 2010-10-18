@@ -80,3 +80,13 @@ void Shader::Enable(bool enable)
 	else
 		glUseProgramObjectARB(0);
 }
+
+void Shader::BindTexture(const sf::Image& image, std::string samplerName, int texUnit)
+{
+	int samplerLocation = glGetUniformLocationARB(shaderProgram, samplerName.c_str());
+
+	glActiveTexture(GL_TEXTURE0 + texUnit);
+	image.Bind();
+
+	glUniform1i(samplerLocation, texUnit);
+}

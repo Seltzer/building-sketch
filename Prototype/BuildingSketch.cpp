@@ -4,6 +4,7 @@
 #include "BuildingGeneration.h"
 #include "SketchPreprocessing.h"
 #include "Shader.h"
+#include "HeightmapProcessing.h"
 
 #ifdef _WIN32
 	// Required for ChangeWindowTitle() since SFML doesn't provide a platform-agnostic way
@@ -232,7 +233,9 @@ void BuildingSketch::DrawSolid(const Poly poly)
 	if (filled) {
 		glColor3f(0.5f, 0.5f, 0.5f);
 		buildingShader->Enable(true);
-		displacementMap.Bind();
+		buildingShader->BindTexture(displacementMap, "reliefmap", 0);
+		buildingShader->BindTexture(normalMap, "normalmap", 1);
+
 
 		glNormal3fv(poly.GetNormal().data);
 		glMultiTexCoord3fv(GL_TEXTURE1, poly.GetTangent().data);
@@ -252,8 +255,11 @@ void BuildingSketch::DrawSolid(const Poly poly)
 		}
 		glEnd();
 
-		glDisable(GL_TEXTURE_2D);
 		buildingShader->Enable(false);
+		glActiveTexture(GL_TEXTURE0);
+		glDisable(GL_TEXTURE_2D);
+		glActiveTexture(GL_TEXTURE1);
+		glDisable(GL_TEXTURE_2D);
 	}
 }
 
@@ -280,6 +286,7 @@ void BuildingSketch::RenderLoop()
 
 	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Memory leak
 	displacementMap.LoadFromFile("collage_height.jpg");
+	normalMap = heightToNormal(displacementMap);
 
 	while (win->IsOpened())
 	{
