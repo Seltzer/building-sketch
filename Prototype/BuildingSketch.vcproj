@@ -224,6 +224,18 @@
 				RelativePath=".\vecspec.inl"
 				>
 			</File>
+			<Filter
+				Name="Shaders"
+				>
+				<File
+					RelativePath=".\displacement.frag"
+					>
+				</File>
+				<File
+					RelativePath=".\displacement.vert"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -276,18 +288,6 @@
 			</File>
 			<File
 				RelativePath=".\vec.h"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="Shaders"
-			>
-			<File
-				RelativePath=".\displacement.frag"
-				>
-			</File>
-			<File
-				RelativePath=".\displacement.vert"
 				>
 			</File>
 		</Filter>

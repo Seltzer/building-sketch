@@ -33,7 +33,7 @@ void Stroke::CalculateBounds(void)
 
 
 LineOfSymmetry::LineOfSymmetry()
-	: pointOnLine(0,0), direction(0,0), perpDirection(0,0)
+	: pointOnLine(0,0), direction(0,0), perpDirection(0,0), score(0)
 {
 }
 

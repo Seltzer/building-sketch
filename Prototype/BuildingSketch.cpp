@@ -22,6 +22,8 @@ BuildingSketch::BuildingSketch()
 			windowSize(800, 600), mouseAction(NONE), showAxis(true), defaultAppString("Building Sketch")
 {	
 	verticalDivision = windowSize.x/2;
+
+	ResetStrokes();
 }
 
 void BuildingSketch::UpdateBuilding()
@@ -135,6 +137,12 @@ void BuildingSketch::ResetStrokes()
 	currentStroke = Stroke();
 	los = LineOfSymmetry();
 	maxArea = 0;
+
+	for (int x = 0; x <= 800; x++)
+	{
+		for (int y = 0; y <= 600; y++)
+			pixels[x][y] = false;
+	}
 }
 
 void BuildingSketch::RenderStrokes()
@@ -413,7 +421,7 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 		// Do symmetry related stuff
 		else if (Event.Key.Code == sf::Key::S)
 		{
-			los = CalculateSymmetry(strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
+			los = CalculateSymmetry(pixels, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
 		}
 		// Increase the rations count for the rotation algorith.
 		else if (Event.Key.Code == sf::Key::Comma)
@@ -515,6 +523,7 @@ void BuildingSketch::MouseMoved(int2 pos)
 		{
 			// If we are drawing record movements.
 			currentStroke.points.push_back(pos);
+			pixels[pos.x][pos.y] = true;
 			break;
 		}
 		case TRACKING:
@@ -551,6 +560,4 @@ void BuildingSketch::MouseWheelMoved(int delta)
 		zoom = (zoom<-30.0f) ? -30.0f: zoom;
 	} 
 }
-
-
 

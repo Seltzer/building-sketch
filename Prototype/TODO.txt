@@ -1,0 +1,6 @@
+Symmetry:
+	- Consider spread of pair matches
+	- Discount points on right
+	- Map midpoint position to matches
+	- Bias towards centre
+	- Sloped LOS

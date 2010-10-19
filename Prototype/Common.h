@@ -37,6 +37,8 @@ struct LineOfSymmetry
 	LineOfSymmetry();
 	// For debugging
 	std::string ToString();
+
+	unsigned score;
 };
 
 struct Building

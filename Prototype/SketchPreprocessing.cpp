@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 #include "SketchPreprocessing.h"
 #include "Common.h"
 
@@ -65,31 +66,23 @@ Stroke Reduce(const Stroke& stroke, float threshold)
  * TODO: This is a prime candidate for algorithm optimisation - strokes and points should be partitioned 
  *       by area so that the neighbourhood of position can quickly be discovered
  */
-bool PointExistsNear(vector<Stroke>& strokes, const int2 position)
+bool PointExistsNear(bool pixels[805][605], const int2 position)
 {
-	// Iterate over all strokes
-	for (vector<Stroke>::iterator it = strokes.begin(); it < strokes.end(); it++)
-	{
-		// Iterate over points of each stroke
-		for (vector<int2>::iterator it2 = (*it).points.begin(); it2 < (*it).points.end(); it2++)
-		{
-			int2& point = (*it2);
-
-			if (point == position)
-				return true;
-		}
-	}
-
-	return false;
+	return  pixels[position.x][position.y];
 }
 
 
 
 
 // Evaluate a line of symmetry, and return a heuristic score
-unsigned EvaluateLOS(const LineOfSymmetry& los, vector<Stroke>& strokes, Stroke& mirroredStroke1, Stroke& mirroredStroke2)
+void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, Stroke& mirroredStroke1, Stroke& mirroredStroke2)
 {
 	unsigned matches = 0;
+
+	// Distribution of matches over distances from LOS
+	map<int,int> matchDistribution;
+
+	unsigned maxDistance = 0;
 
 	// Calculate distance from origin to line of symmetry
 	// This is the projection of the los position vector on the los perpendicular vector
@@ -113,6 +106,7 @@ unsigned EvaluateLOS(const LineOfSymmetry& los, vector<Stroke>& strokes, Stroke&
 			int proj = fabs((float) dot(p, los.perpDirection));
 
 			float pointToLosDistance = proj - originToLosDistance;
+			int dist = pointToLosDistance;
 			
 
 			float2 counterpartPosition = p + los.perpDirection * pointToLosDistance * 2;
@@ -123,9 +117,27 @@ unsigned EvaluateLOS(const LineOfSymmetry& los, vector<Stroke>& strokes, Stroke&
 				continue;
 
 			// Give more weighting for more points existing near the counterpart position???
-			if (PointExistsNear(strokes, counterpartPosAsInts))
-				matches++;
 
+
+			if ( (counterpartPosAsInts.x > 0) && (counterpartPosAsInts.x < 800) )
+			{
+				if ( (counterpartPosAsInts.y > 0) && (counterpartPosAsInts.y < 600) )
+				{
+					if (PointExistsNear(pixels, counterpartPosAsInts))
+					{
+						if (matchDistribution.count(dist))
+							matchDistribution[dist] = matchDistribution[dist] + 1;
+						else
+							matchDistribution[dist] = 1;
+
+						if (dist > maxDistance)
+							maxDistance = dist;
+
+						matches++;
+					}
+				}
+			}
+			
 			// for testing
 			if (pointToLosDistance < 0)
 				mirroredStroke1.points.push_back(int2(counterpartPosition.x, counterpartPosition.y));
@@ -140,13 +152,16 @@ unsigned EvaluateLOS(const LineOfSymmetry& los, vector<Stroke>& strokes, Stroke&
 		cout << "# matches = " << matches << endl;
 	#endif
 
+	// Calculate score
 
-	return matches;
+	//los.score = matches * ((float) buildingOutline.bounds.width + maxDistance / buildingOutline.bounds.width);
+	los.score = matches;
+
 }
 
 
 
-LineOfSymmetry CalculateSymmetry(vector<Stroke>& strokes, Stroke& buildingOutline, Stroke& mirroredStroke1, Stroke& mirroredStroke2)
+LineOfSymmetry CalculateSymmetry(bool pixels[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, Stroke& mirroredStroke1, Stroke& mirroredStroke2)
 {
 	LineOfSymmetry los;
 		
@@ -165,11 +180,11 @@ LineOfSymmetry CalculateSymmetry(vector<Stroke>& strokes, Stroke& buildingOutlin
 	{
 		los.pointOnLine = int2(buildingOutline.bounds.x + x, buildingOutline.bounds.y);
 			
-		unsigned matches = EvaluateLOS(los, strokes, mirroredStroke1, mirroredStroke2);
-
-		if (matches > bestMatch)
+		EvaluateLOS(los, pixels, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
+		
+		if (los.score > bestMatch)
 		{
-			bestMatch = matches;
+			bestMatch = los.score;
 			bestX = x;
 		}
 	}
@@ -180,7 +195,7 @@ LineOfSymmetry CalculateSymmetry(vector<Stroke>& strokes, Stroke& buildingOutlin
 	mirroredStroke1.points.clear();
 	mirroredStroke2.points.clear();
 		
-	EvaluateLOS(los, strokes, mirroredStroke1, mirroredStroke2);
+	EvaluateLOS(los, pixels, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
 
 	return los;
 }

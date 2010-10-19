@@ -56,6 +56,10 @@ private:		// Private fields
 	std::vector<Stroke> strokes, reducedStrokes, polyLines, featureOutlines;
 	float maxArea;
 
+	// Another data structure for tracking strokes which are drawn (pre-reduction)
+	// Used for symmetry calculation
+	bool pixels[805][605];
+
 	// Symmetry stuff
 	LineOfSymmetry los;							// last line of symmetry which was calculated
 	Stroke mirroredStroke1, mirroredStroke2;	// these two are for testing symmetry
