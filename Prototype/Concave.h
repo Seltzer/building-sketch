@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "Types.h"
+#include "Poly.h"
 
 
 
@@ -19,7 +20,7 @@ public:
 	~Tess_Poly();
 	//int Init(GLvoid);
 	//int Set_Winding_Rule(GLenum winding_rule);
-	void Render_Contour(const std::vector<float3>& poly);
+	void Render_Contour(const Poly& poly);
 	void Begin_Polygon();
 	void End_Polygon();
 };

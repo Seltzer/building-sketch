@@ -241,19 +241,19 @@ void BuildingSketch::DrawSolid(const Poly poly)
 		glMultiTexCoord3fv(GL_TEXTURE1, poly.GetTangent().data);
 		glMultiTexCoord3fv(GL_TEXTURE2, poly.GetBitangent().data);
 
-		// TODO: Support texturing with the tesselator. And make it a one shot process while you're about it
-		/*tesselator.Begin_Polygon();
-		tesselator.Render_Contour(poly.GetVerts());
-		tesselator.End_Polygon();*/
+		// TODO: Make tesselating a one shot process
+		tesselator.Begin_Polygon();
+		tesselator.Render_Contour(poly);
+		tesselator.End_Polygon();
 
-		glBegin(GL_POLYGON); // Draw raw stroke as line strip
+		/*glBegin(GL_POLYGON); // Draw raw stroke as line strip
 		for (vector<float3>::const_iterator v = poly.GetVerts().begin(); v != poly.GetVerts().end(); v++)
 		{
 			float2 uv = poly.GetTexCoords(*v);
 			glTexCoord2fv(uv.data);
 			glVertex3f(v->x, v->y, v->z);
 		}
-		glEnd();
+		glEnd();*/
 
 		buildingShader->Enable(false);
 		glActiveTexture(GL_TEXTURE0);
@@ -286,7 +286,7 @@ void BuildingSketch::RenderLoop()
 
 	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Memory leak
 	displacementMap2.LoadFromFile("collage_height.jpg");
-	normalMap = heightToNormal(displacementMap);
+	normalMap = heightToNormal(displacementMap2);
 
 	while (win->IsOpened())
 	{

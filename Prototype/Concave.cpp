@@ -1,12 +1,15 @@
 #include <iostream>
 #include "Concave.h"
 
-
+static const Poly* currentPoly = NULL;
 
 void __stdcall vertexCallback(GLvoid *vertex)
 {
 	double3& v = *(double3*)(vertex);
 	//std::cout << v.x << " " << v.y << " " << v.z << std::endl;
+	assert(currentPoly);
+	float2 texCoord = currentPoly->GetTexCoords(v);
+	glTexCoord2fv(texCoord.data);
 	glVertex3dv(v.data);
 }
 
@@ -61,11 +64,12 @@ Tess_Poly::~Tess_Poly()
 	gluDeleteTess(tobj);
 }
 
-void Tess_Poly::Render_Contour(const std::vector<float3>& poly)
+void Tess_Poly::Render_Contour(const Poly& poly)
 {
+	currentPoly = &poly;
 	static std::vector<double3> newPoly;
-	newPoly.resize(poly.size());
-	for (unsigned i = 0; i < poly.size(); i++)
+	newPoly.resize(poly.GetVerts().size());
+	for (unsigned i = 0; i < newPoly.size(); i++)
 		newPoly[i] = double3(poly[i].x, poly[i].y, poly[i].z);
 
 	gluTessBeginContour(tobj);

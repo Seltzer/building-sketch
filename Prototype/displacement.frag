@@ -48,7 +48,7 @@ void main()
 	//vec3 normal = vec3((0.5-normalLookup.ba) * (-depth * 255.0), 1.0);
 	normal = normalize(normal);
 	
-	gl_FragColor = vec4(color.xyz * (0.4 + max(0.0, dot(lightDir, normal))), 1.0);
+	gl_FragColor = vec4(color.xyz * (0.25 + 0.75 * max(0.0, dot(lightDir, normal))), 1.0);
 	//gl_FragColor = texture2D(normalmap, pt_eye.xy);
 }
 
@@ -56,7 +56,7 @@ void main()
 void ray_intersect_rm(inout vec3 dp, in vec3 ds)
 {
 	int linear_search_steps = 10;
-	int binary_search_steps = 5;
+	int binary_search_steps = 10;
 
 	float depth_step=1.0/float(linear_search_steps);
 
