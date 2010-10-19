@@ -1,36 +1,57 @@
 #include <iostream>
-#include <SFML/Graphics.hpp>
-#include <math.h>
 #include "DisplacementMapping.h"
 
 sf::Image displacementMap;
+// The displacement vector stores the image data as it is being processed
+std::vector<std::vector<PixelData>> displacementVector;
+
 sf::Color black = sf::Color(0, 0, 0, 255);
 sf::Color gray = sf::Color(128, 128, 128, 255);
 sf::Color white = sf::Color(255, 255, 255, 255);
-
+int width;
+int height;
 
 void generateDisplacementMap(Bounds bounds, std::vector<Stroke>& featureStrokes)
 {
-	//displacementMap;
-	displacementMap.Create(bounds.width, bounds.height, white);
+	if (featureStrokes.empty()) return;
 
-	for (std::vector<Stroke>::const_iterator strokeItterator = featureStrokes.begin(); strokeItterator != featureStrokes.end(); strokeItterator++)
+	// Set the width and heigth of the map.
+	width = bounds.width;
+	height = bounds.height;
+
+	// Set up the displacement vector.
+	std::vector<PixelData> yVector;
+	PixelData pixelData;
+	pixelData.color = white;
+	pixelData.strokeID = -1;
+	pixelData.intersectingLines = false;
+	yVector.reserve(height);
+	yVector.assign(height, pixelData);
+	displacementVector.reserve(width);
+	displacementVector.assign(width, yVector);
+
+	// Set up the displacement image.
+	displacementMap.Create(width, height, white);
+
+	for (int i = 0; i <= featureStrokes.size()-1; i++)
 	{
-		Stroke stroke = (*strokeItterator);
+		Stroke stroke = featureStrokes[i];
+		//Stroke stroke = (*strokeItterator);
 		int2 oldPoint = stroke.points[0];
-		for (std::vector<int2>::const_iterator v = stroke.points.begin()+1; v != stroke.points.end(); v++)
+		for (int j = 0; j <= stroke.points.size()-1; j++)
 		{			
-			int2 point = (*v);
-			linePlot(point.x, oldPoint.x, point.y, oldPoint.y);
+			int2 point = stroke.points[j];
+			plotLine(point.x, oldPoint.x, point.y, oldPoint.y, i, j);
 			oldPoint = point;
 		}
-		ployFill(bounds, stroke.bounds);
+		fillPloy(stroke.bounds, i);		
 	}
 
-	bool success = displacementMap.SaveToFile("displacement_map.jpg");
+	vectorToImage();
+	displacementMap.SaveToFile("displacement_map.jpg");
 }
 
-void linePlot(int x0, int x1, int y0, int y1)
+void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 {	
 	bool steep = abs(y1-y0) > abs(x1-x0);
 	if (steep) 
@@ -53,11 +74,23 @@ void linePlot(int x0, int x1, int y0, int y1)
 	{
 		if (steep)
 		{
-			displacementMap.SetPixel(y,x, black);
+			if ((displacementVector[y][x].color == black) && (displacementVector[y][x].strokeID == strokeID))
+			{
+				displacementVector[y][x].intersectingLines = true;
+			}
+			displacementVector[y][x].color = black;
+			displacementVector[y][x].strokeID = strokeID;			
+			displacementVector[y][x].lineID.push_back(lineID);
 		} 
 		else
 		{
-			displacementMap.SetPixel(x,y, black);
+			if ((displacementVector[x][y].color == black) && (displacementVector[x][y].strokeID == strokeID))
+			{
+				displacementVector[x][y].intersectingLines = true;				
+			}
+			displacementVector[x][y].color = black;
+			displacementVector[x][y].strokeID = strokeID;
+			displacementVector[x][y].lineID.push_back(lineID);
 		}
 		error = error - deltay;
 		if (error < 0)
@@ -68,31 +101,78 @@ void linePlot(int x0, int x1, int y0, int y1)
 	}
 }
 
-void ployFill(Bounds buildingBounds, Bounds strokeBounds)
+void fillPloy(Bounds strokeBounds, int strokeID)
 {
 	Bounds bounds = strokeBounds;
 	bool shouldFill;
-
-	std::cout << "x: " << bounds.x << std::endl;
-	std::cout << "y: " << bounds.y << std::endl;
-	std::cout << "width: " << bounds.width << std::endl;
-	std::cout << "height: " << bounds.height << std::endl;
-	std::cout << "building width: " << buildingBounds.width << std::endl;
-	std::cout << "building height: " << buildingBounds.height << std::endl;
-
+	std::vector<int> lastFlipLine;
 
 	for (int y = bounds.y; y <= (bounds.y+bounds.height); y++)
 	{
 		shouldFill = false;
-		//if (displacementMap.GetPixel(bounds.x,y) == black) shouldFill = true;
+		if (displacementMap.GetPixel(bounds.x,y) == black) shouldFill = true;
 		for (int x = bounds.x; x <= (bounds.x+bounds.width); x++)
 		{		
-			if (displacementMap.GetPixel(x,y) == black)
+			if (displacementVector[x][y].color == black)
 			{
-				if (displacementMap.GetPixel(x-1,y) != black)
+				if ((displacementVector[x][y].strokeID == strokeID)
+					&& (!contains(displacementVector[x][y].lineID, lastFlipLine))
+					&& !isPeak(x, y)) // && (displacementVector[x-1][y].color != black) /*&& (!displacementVector[x][y].intersectingLines)*/
+				{
 					shouldFill = !shouldFill;
+					lastFlipLine = displacementVector[x][y].lineID;
+				}
 			}
-			if ((shouldFill) && (displacementMap.GetPixel(x,y) == white)) displacementMap.SetPixel(x,y, gray);
+			if ((shouldFill) && (displacementVector[x][y].color == white)) displacementVector[x][y].color = gray;
+		}
+	}
+}
+
+// TODO: Change this to a bit flag instead of vector. Bah humbug!
+bool contains(std::vector<int> v1, std::vector<int> v2)
+{
+	if (v1.empty()) return false;
+	for (std::vector<int>::iterator vectorIterator1 = v1.begin(); vectorIterator1 != v1.end(); vectorIterator1++)
+	{
+		int number1 = (*vectorIterator1);
+		for (std::vector<int>::iterator vectorIterator2 = v2.begin(); vectorIterator2 != v2.end(); vectorIterator2++)
+		{
+			int number2 = (*vectorIterator2);
+			if (number1 == number2)	return true;
+		}
+	}
+	return false;
+}
+
+// Check if this point is a peak or trough
+// ie. it is not connected to another line either above or below it.
+// and neither on its left nor right.
+bool isPeak(int x, int y)
+{
+	bool isPeak = false;
+	// Check above
+	if ((displacementVector[x][y-1].color != black)
+		&& (displacementVector[x-1][y-1].color != black)
+		&& (displacementVector[x+1][y-1].color != black))
+		isPeak = true;
+	// Check below
+	if ((displacementVector[x][y+1].color != black)
+		&& (displacementVector[x-1][y+1].color != black)
+		&& (displacementVector[x+1][y+1].color != black))
+		isPeak = true;
+	return isPeak;
+}
+
+/*
+ * Copies appropriate pixel data from the vector to the image.
+ */
+void vectorToImage()
+{
+	for (int x = 0; x <= width-1; x++) 
+	{
+		for (int y = 0; y <= height-1; y++) 
+		{
+			displacementMap.SetPixel(x, y, displacementVector[x][y].color);
 		}
 	}
 }
