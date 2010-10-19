@@ -4,8 +4,6 @@
 
 using namespace std;
 
-
-
 vector<int2> DouglasPeuker(vector<int2>::const_iterator start, vector<int2>::const_iterator end, float threshold)
 {
 	vector<int2> result;
@@ -49,6 +47,17 @@ vector<int2> DouglasPeuker(vector<int2>::const_iterator start, vector<int2>::con
 	return result;
 }
 
+Stroke Reduce(const Stroke& stroke, float threshold)
+{
+	if (stroke.points.size() <= 2)
+		return stroke; // Cannot reduce any further
+	vector<int2> result = DouglasPeuker(stroke.points.begin(), stroke.points.end() - 1, threshold);
+	result.push_back(stroke.points.back()); // The recursion will never insert the last point.
+	Stroke final;
+	final.length = stroke.points.size();
+	final.points = result;
+	return final;
+}
 
 /* Currently only checks if a point is AT position - it used to check points in the vicinity of position
  * but that has temporarily been removed due to speed issues.

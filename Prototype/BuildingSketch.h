@@ -20,7 +20,6 @@ public:
 	
 	// Sketch processing/rendering methods
 	void ProcessStroke(const Stroke& stroke);
-	Stroke Reduce(const Stroke& stroke, float threshold);
 	void ResetStrokes();
 	void RenderStrokes();
 	void DrawStroke(const Stroke& stroke);
@@ -75,7 +74,7 @@ private:		// Private fields
 	int verticalDivision;
 
 	Shader* buildingShader;
-	sf::Image displacementMap; // TODO: Generate this from features
+	sf::Image displacementMap2; // TODO: Generate this from features
 	sf::Image normalMap;
 
 	// UI stuff

@@ -3,6 +3,7 @@
 #include "BuildingSketch.h"
 #include "BuildingGeneration.h"
 #include "SketchPreprocessing.h"
+#include "DisplacementMapping.h"
 #include "Shader.h"
 #include "HeightmapProcessing.h"
 
@@ -51,12 +52,30 @@ void BuildingSketch::UpdateBuilding()
 			stroke.points[i].x -= x_dif;
 			stroke.points[i].y -= y_dif;
 		}
+		stroke.bounds.x -= x_dif;
+		stroke.bounds.y -= y_dif;
+		stroke.points.push_back(stroke.points[0]);
 		processedFeatureOutlines.push_back(stroke);
 	}
-
-
 	if (outline.size() == 0)
 		return;
+
+	// Move the feature outlines to a 0,0 co-ordinate & generate a displacement map
+	std::vector<Stroke> displacementMapStrokes;
+	for (vector<Stroke>::iterator s = processedFeatureOutlines.begin(); s != processedFeatureOutlines.end(); s++)
+	{
+		Stroke stroke = (*s);
+		for (unsigned i = 0; i < stroke.points.size(); i++)
+		{
+			stroke.points[i].x += building.bounds.width/2;
+			stroke.points[i].y += building.bounds.height/2;
+		}
+		stroke.bounds.x += building.bounds.width/2;
+		stroke.bounds.y += building.bounds.height/2;
+		displacementMapStrokes.push_back(stroke);
+	}
+	// Generate the displacement map
+	generateDisplacementMap(building.bounds, displacementMapStrokes);
 
 	switch (buildingAlgorithm)
 	{
@@ -77,9 +96,6 @@ void BuildingSketch::UpdateBuilding()
 	}
 }
 
-
-
-
 void BuildingSketch::ProcessStroke(const Stroke& stroke)
 {
 	strokes.push_back(currentStroke); // Record unprocessed stroke
@@ -99,7 +115,7 @@ void BuildingSketch::ProcessStroke(const Stroke& stroke)
 	} else {
 		featureOutlines.push_back(reduced);
 	}
-
+	
 	reducedStrokes.push_back(reduced);
 }
 
@@ -121,23 +137,10 @@ void BuildingSketch::ResetStrokes()
 	maxArea = 0;
 }
 
-
-Stroke BuildingSketch::Reduce(const Stroke& stroke, float threshold)
-{
-	if (stroke.points.size() <= 2)
-		return stroke; // Cannot reduce any further
-	vector<int2> result = DouglasPeuker(stroke.points.begin(), stroke.points.end() - 1, threshold);
-	result.push_back(stroke.points.back()); // The recursion will never insert the last point.
-	Stroke final;
-	final.length = stroke.points.size();
-	final.points = result;
-	return final;
-}
-
 void BuildingSketch::RenderStrokes()
 {
 	// Draw background
-	glColor3f(1, 1, 1);
+	glColor3f((248.0/255.0), (248/255.0), (245/255.0));
 	glBegin(GL_QUADS);
 	glVertex2f(0, 0);
 	glVertex2f(10000, 0);
@@ -189,11 +192,6 @@ void BuildingSketch::DrawStroke(const Stroke& stroke)
 	glEnd();
 }
 
-
-
-
-
-
 ////////////////////////////////////////////////// Building rendering methods
 void BuildingSketch::RenderBuilding()
 {
@@ -207,7 +205,7 @@ void BuildingSketch::RenderBuilding()
 	// Draw axis
 	if (showAxis) {
 		glBegin(GL_LINES); // Draw line
-			glColor3f(0.0f, 1.0f, 0.0f);  // green = x axis
+			glColor3f(0.0f, 0.0f, 0.0f);  // black = x axis
 			glVertex3f(0, 0, 0);
 			glVertex3f(200, 0, 0);
 
@@ -215,7 +213,7 @@ void BuildingSketch::RenderBuilding()
 			glVertex3f(0, 0, 0);
 			glVertex3f(0, 200, 0);
 
-			glColor3f(0.0f, 0.0f, 1.0f); // blue = z axis
+			glColor3f(1.0f, 0.0f, 0.0f); // red = z axis
 			glVertex3f(0, 0, 0);
 			glVertex3f(0, 0, 200);
 		glEnd();
@@ -231,9 +229,11 @@ void BuildingSketch::DrawSolid(const Poly poly)
 {
 	glDisable(GL_CULL_FACE);
 	if (filled) {
-		glColor3f(0.5f, 0.5f, 0.5f);
+		glColor3f((249.0/255.0), (249.0/255.0), (240.0/255.0));
 		buildingShader->Enable(true);
-		buildingShader->BindTexture(displacementMap, "reliefmap", 0);
+		displacementMap2.Bind();
+
+		buildingShader->BindTexture(displacementMap2, "reliefmap", 0);
 		buildingShader->BindTexture(normalMap, "normalmap", 1);
 
 
@@ -265,7 +265,7 @@ void BuildingSketch::DrawSolid(const Poly poly)
 
 void BuildingSketch::DrawOutline(const Poly poly)
 {
-	glColor3f(1.0f, 0.0f, 0.0f);
+	glColor3f(0.65f, 0.0f, 0.0f);
 	//RandomColor();
 	glBegin(GL_LINE_LOOP); // Draw raw stroke as line loop
 		for (vector<float3>::const_iterator v = poly.GetVerts().begin(); v != poly.GetVerts().end(); v++)
@@ -285,7 +285,7 @@ void BuildingSketch::RenderLoop()
 	ChangeWindowTitle(defaultAppString + " - Extrusion Mode");
 
 	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Memory leak
-	displacementMap.LoadFromFile("collage_height.jpg");
+	displacementMap2.LoadFromFile("collage_height.jpg");
 	normalMap = heightToNormal(displacementMap);
 
 	while (win->IsOpened())
@@ -296,7 +296,7 @@ void BuildingSketch::RenderLoop()
 			ProcessEvent(Event);
 
 
-		glClearColor(0, 0, 0, 1);
+		glClearColor((51.0/255.0), (51.0/255.0), (102.0/255.0), 1); //left panel background color
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
