@@ -5,6 +5,7 @@ varying vec3 vertex_pos;
 varying float vertex_dist;
 varying vec3 normal;
 varying vec3 lightDir;
+varying vec3 halfVec;
 
 uniform sampler2D reliefmap;
 uniform sampler2D normalmap;
@@ -48,7 +49,10 @@ void main()
 	//vec3 normal = vec3((0.5-normalLookup.ba) * (-depth * 255.0), 1.0);
 	normal = normalize(normal);
 	
-	gl_FragColor = vec4(color.xyz * (0.25 + 0.75 * max(0.0, dot(lightDir, normal))), 1.0);
+	float ambient = 0.25;
+	float diffuse = 0.5 * max(0.0, -dot(lightDir, normal));
+	float specular = 0.8 * pow(max(0.0, -dot(normal, halfVec)), 20);
+	gl_FragColor = vec4(color.xyz * (ambient + diffuse) + specular, 1.0);
 	//gl_FragColor = texture2D(normalmap, pt_eye.xy);
 }
 
