@@ -213,6 +213,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\SymmetryDetection.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\vec.inl"
 				>
 			</File>
@@ -280,6 +284,10 @@
 			</File>
 			<File
 				RelativePath=".\SketchPreprocessing.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SymmetryDetection.h"
 				>
 			</File>
 			<File

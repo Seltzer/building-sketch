@@ -3,6 +3,7 @@
 #include "BuildingSketch.h"
 #include "BuildingGeneration.h"
 #include "SketchPreprocessing.h"
+#include "SymmetryDetection.h"
 #include "DisplacementMapping.h"
 #include "Shader.h"
 #include "HeightmapProcessing.h"
@@ -141,7 +142,10 @@ void BuildingSketch::ResetStrokes()
 	for (int x = 0; x <= 800; x++)
 	{
 		for (int y = 0; y <= 600; y++)
+		{
 			pixels[x][y] = false;
+			pointNear[x][y] = false;
+		}
 	}
 }
 

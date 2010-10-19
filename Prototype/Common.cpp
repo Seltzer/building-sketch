@@ -12,6 +12,9 @@ float randFloat()
 
 void Stroke::CalculateBounds(void)
 {
+	if (points.size() == 0)
+		return;
+
 	int2 minCoords = int2(points[0].x,points[0].y);
 	int2 maxCoords = int2(points[0].x,points[0].y);
 	for (unsigned i = 0; i < points.size(); i++)

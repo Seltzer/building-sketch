@@ -1,6 +1,20 @@
 Symmetry:
-	- Consider spread of pair matches
-	- Discount points on right
-	- Map midpoint position to matches
 	- Bias towards centre
-	- Sloped LOS
+	- Interpolate points if we don't have enough
+	- Speed up neighbourhood search
+	- Consider distribution across LOS axis
+	- Introduce non-verticals to the candidate LOS set
+	- Actually do something with the symmetry
+	
+	
+Generate displacement map from features
+
+Small features:
+	- Cancel current line
+	- Undo/redo
+	- Fixing angles
+	- Shift to draw straight line
+	
+Parameterisation
+	
+	

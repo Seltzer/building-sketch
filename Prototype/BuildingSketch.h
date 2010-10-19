@@ -59,6 +59,7 @@ private:		// Private fields
 	// Another data structure for tracking strokes which are drawn (pre-reduction)
 	// Used for symmetry calculation
 	bool pixels[805][605];
+	bool pointNear[805][605];
 
 	// Symmetry stuff
 	LineOfSymmetry los;							// last line of symmetry which was calculated
