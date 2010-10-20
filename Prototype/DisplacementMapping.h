@@ -13,7 +13,7 @@ struct PixelData
 {
 	sf::Color color;
 	int strokeID;
-	int lineID;
+	std::vector<int> lineID;
 	bool intersectingLines;
 };
 

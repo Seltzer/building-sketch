@@ -83,8 +83,8 @@ void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 				displacementVector[y][x].intersectingLines = true;
 			}
 			displacementVector[y][x].color = black;
-			displacementVector[y][x].strokeID = strokeID;			
-			displacementVector[y][x].lineID = lineID;
+			displacementVector[y][x].strokeID = strokeID;	
+			displacementVector[y][x].lineID.push_back(lineID);
 		} 
 		else
 		{
@@ -94,7 +94,7 @@ void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 			}
 			displacementVector[x][y].color = black;
 			displacementVector[x][y].strokeID = strokeID;
-			displacementVector[x][y].lineID = lineID;
+			displacementVector[x][y].lineID.push_back(lineID);
 		}
 		error = error - deltay;
 		if (error < 0)
@@ -136,7 +136,7 @@ void fillPloy(Stroke stroke, int strokeID)
 						&& (!isIntersectingAround(x,y))
 						)) 
 					{
-						if ((!noChange) || (displacementVector[x-1][y].lineID != displacementVector[x][y].lineID))
+						if ((!noChange) || (!contains(displacementVector[x-1][y].lineID, displacementVector[x][y].lineID)))
 						{
 							shouldFill = !shouldFill;
 							noChange = true;
@@ -149,9 +149,15 @@ void fillPloy(Stroke stroke, int strokeID)
 					if ((displacementVector[x][y].intersectingLines)
 						&& (isPeak(x,y, stroke, strokeID)))
 					{	
-						if (noChange) shouldFill = !shouldFill;
+						if (noChange) {
+							shouldFill = !shouldFill;
+							displacementVector[x][y].color = blue;
+						} else
+						{
+							displacementVector[x][y].color = red;
+						}
 						noChange = true;
-						displacementVector[x][y].color = blue;
+						
 					}
 				}
 			}
