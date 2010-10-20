@@ -1,11 +1,8 @@
 Symmetry:
 	- Bias towards centre
 	- Interpolate points if we don't have enough
-	- Speed up neighbourhood search
 	- Consider distribution across LOS axis
-	- Introduce non-verticals to the candidate LOS set
-	- Actually do something with the symmetry
-	
+		
 	
 Generate displacement map from features
 

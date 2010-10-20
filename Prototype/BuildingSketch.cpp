@@ -425,7 +425,7 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 		// Do symmetry related stuff
 		else if (Event.Key.Code == sf::Key::S)
 		{
-			los = CalculateSymmetry(pixels, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
+			los = CalculateSymmetry(pixels, pointNear, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
 		}
 		// Increase the rations count for the rotation algorith.
 		else if (Event.Key.Code == sf::Key::Comma)
@@ -528,6 +528,16 @@ void BuildingSketch::MouseMoved(int2 pos)
 			// If we are drawing record movements.
 			currentStroke.points.push_back(pos);
 			pixels[pos.x][pos.y] = true;
+			
+			for (int x = -1; x <= 1; x++)
+			{
+				for (int y = -1; y <= 1; y++)
+				{
+					pointNear[pos.x + x][pos.y + y] = true;
+				}
+			}
+
+
 			break;
 		}
 		case TRACKING:
@@ -564,4 +574,3 @@ void BuildingSketch::MouseWheelMoved(int delta)
 		zoom = (zoom<-30.0f) ? -30.0f: zoom;
 	} 
 }
-

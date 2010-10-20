@@ -7,16 +7,14 @@ using namespace std;
 
 
 
-bool PointExistsNear(bool pixels[805][605], const int2 position)
+bool PointExistsNear(bool pixels[805][605], bool pointNear[805][605], const int2 position)
 {
-	// TODO this can all be precalculated
-	return pixels[position.x][position.y] || pixels[position.x - 1][position.y - 1] || pixels[position.x - 1][position.y] || pixels[position.x - 1][position.y + 1] ||
-											 pixels[position.x + 1][position.y - 1] || pixels[position.x + 1][position.y] || pixels[position.x + 1][position.y + 1] ||
-										  pixels[position.x][position.y - 1] || pixels[position.x][position.y + 1];
+	return pixels[position.x][position.y];
+//	return pointNear[position.x][position.y];
 }
 
 
-bool EdgeExistsBetween(bool pixels[805][605], const int2 pos1, const int2 pos2)
+bool EdgeExistsBetween(bool pixels[805][605], bool pointNear[805][605],const int2 pos1, const int2 pos2)
 {
 	int2 edgeVector = pos2 - pos1;
 	float length = sqrt((float) dot(edgeVector, edgeVector));
@@ -30,7 +28,7 @@ bool EdgeExistsBetween(bool pixels[805][605], const int2 pos1, const int2 pos2)
 	{
 		int2 pointToInspect = pos1 + edgeVector * t;
 
-		if (!PointExistsNear(pixels, pointToInspect))
+		if (!PointExistsNear(pixels, pointNear, pointToInspect))
 			return false;
 	}
 
@@ -49,24 +47,22 @@ bool operator <(const int2& a, const int2& b)
 
 
 
-void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, Stroke& mirroredStroke1, Stroke& mirroredStroke2)
+void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, Stroke& mirroredStroke1, Stroke& mirroredStroke2)
 {
+	// Number of pair matches found so far
 	unsigned matches = 0;
-
 	// Mapping midpoints to number of matches (this is used to mitigate effects of edges which have many matches
 	map<int2,int> midpointCount;
-
 	// Mapping distances to number of matches (used to measure spread of matches around LOS)
 	map<int,int> matchDistribution;
-	
-
 	// Max distance a match point is from LOS
 	unsigned maxDistance = 0;
 
-	// Calculate distance from origin to line of symmetry
-	// This is the projection of the los position vector on the los perpendicular vector
-	float originToLosDistance = fabs((float) dot(los.pointOnLine,los.perpDirection));
 
+
+	// Calculate distance from origin to line of symmetry
+	// This is the projection of the los position vector on the los perpendicular vector for which theta <= pi
+	float originToLosDistance = los.ProjectedVectorMagnitude(los.pointOnLine);
 	#ifdef DEBUGGING
 		cout << "Distance of los from origin is " << originToLosDistance << endl;
 	#endif
@@ -80,38 +76,46 @@ void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], vector<Stroke>& str
 		{
 			// For current point p:
 			float2 p = *it2;
+			//cout << "***** point p = " << p.tostring() << endl;
 		
 			// Calculate magnitude of projection of p (the point's position vector) on LOS
-			int proj = fabs((float) dot(p, los.perpDirection));
+			float proj = los.ProjectedVectorMagnitude(p);
 
+			// Negative if the LOS is in between the origin and p
+			// Positive otherwise
 			float pointToLosDistance = proj - originToLosDistance;
-			int dist = pointToLosDistance;
 			
-			// Vector between point and LOS
-			float2 vectorToLOS = pointToLosDistance * los.perpDirection;
+
+			// Calculate vector between point and LOS
+			float2 vectorToLOS = pointToLosDistance * los.ccwPerp;
 
 			// Calculate midpoint and counterpart
 			float2 midpointPosition = p + vectorToLOS;
+			//cout << "\t midpointPosition = " << midpointPosition.tostring() << " / " << originToLosDistance << endl;
+
 			float2 counterpartPosition = midpointPosition + vectorToLOS;
 			int2 counterpartPosAsInts(counterpartPosition.x, counterpartPosition.y);
 
-			// This is true when p lies on the line of symmetry - this will result in a match which we should ignore
-			if (p == counterpartPosAsInts)
-				continue;
+			// Draw counterpart
+			mirroredStroke1.points.push_back(int2(counterpartPosition.x, counterpartPosition.y));
+			/*
+			if (pointToLosDistance < 0)
+				mirroredStroke1.points.push_back(int2(counterpartPosition.x, counterpartPosition.y));
+			else 
+				mirroredStroke2.points.push_back(int2(counterpartPosition.x, counterpartPosition.y));*/
 
-			// Give more weighting for more points existing near the counterpart position???
 
-
-			if ( (counterpartPosAsInts.x > 0) && (counterpartPosAsInts.x < 800) )
+			if ( (counterpartPosAsInts.x >= 0) && (counterpartPosAsInts.x <= 800) )
 			{
-				if ( (counterpartPosAsInts.y > 0) && (counterpartPosAsInts.y < 600) )
+				if ( (counterpartPosAsInts.y >= 0) && (counterpartPosAsInts.y <= 600) )
 				{
-					if (PointExistsNear(pixels, counterpartPosAsInts))
-					{
-						// TODO move this for optimisation
-						if (dist < 0)
-							continue;
+					// This is true when p lies on the line of symmetry - this will result in a match which we should ignore
+					if (p == counterpartPosAsInts)
+						continue;
 
+					if (PointExistsNear(pixels, pointNear, counterpartPosAsInts))
+					{
+						int dist = pointToLosDistance;
 
 						int2 midpointAsInts(midpointPosition.x, midpointPosition.y);
 						int matchesAtMidpoint = midpointCount.count(midpointAsInts);
@@ -120,7 +124,7 @@ void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], vector<Stroke>& str
 						// with an edge... try to determine this
 						if (matchesAtMidpoint > 4)
 						{
-							if (EdgeExistsBetween(pixels, p, counterpartPosAsInts))
+							if (EdgeExistsBetween(pixels, pointNear, p, counterpartPosAsInts))
 								continue;
 						}
 						else if (matchesAtMidpoint == 0)
@@ -145,12 +149,6 @@ void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], vector<Stroke>& str
 					}
 				}
 			}
-			
-			// for testing
-			if (pointToLosDistance < 0)
-				mirroredStroke1.points.push_back(int2(counterpartPosition.x, counterpartPosition.y));
-			else if (pointToLosDistance > 0)
-				mirroredStroke2.points.push_back(int2(counterpartPosition.x, counterpartPosition.y));
 		}
 	}
 
@@ -192,34 +190,40 @@ void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], vector<Stroke>& str
 
 
 
-LineOfSymmetry CalculateSymmetry(bool pixels[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, Stroke& mirroredStroke1, Stroke& mirroredStroke2)
+LineOfSymmetry CalculateSymmetry(bool pixels[805][605], bool pointNear[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, Stroke& mirroredStroke1, Stroke& mirroredStroke2)
 {
 	LineOfSymmetry los;
 	buildingOutline.CalculateBounds();
 		
 	// For now, assume a vertical gradient for the los
 	los.direction = float2(0,1);
-	//los.direction = float2(0.4,1);
-	los.direction = normal(los.direction);
-	los.perpDirection = float2(-los.direction.y, los.direction.x);
+	los.CalculateVectors();
 	
 	
-	unsigned bestMatch = 0;
-	unsigned bestX = 0;		// hack
+	int bestMatch = -100000;
+	// hack
+	unsigned bestX = 0;	
 	float bestDeltaX = 0;
 	
 	
-	for (float deltaX = 0; deltaX <= 0; deltaX += 0.05)
+	for (float deltaX = 0; deltaX <= 0.4; deltaX += 0.05)
+	//for (float deltaX = 0; deltaX <= 0; deltaX += 0.05)
 	{
-		los.direction = float2(deltaX, 1);
-		los.direction = normal(los.direction);
+		cout << "deltaX = " << deltaX << endl;
+
+		los.direction = float2(deltaX,1);
+		los.CalculateVectors();
 
 		for (int x = 0; x < buildingOutline.bounds.width; x++)
 		{
 			los.pointOnLine = int2(buildingOutline.bounds.x + x, buildingOutline.bounds.y);
+		//	cout << "trying at " << buildingOutline.bounds.x + x << endl;
 			
-			EvaluateLOS(los, pixels, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
+			EvaluateLOS(los, pixels, pointNear, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
 		
+			//cout << "los.score = " << los.score << endl;
+			//cout << "bestMatch = " << bestMatch << endl;
+
 			if (los.score > bestMatch)
 			{
 				bestMatch = los.score;
@@ -230,17 +234,24 @@ LineOfSymmetry CalculateSymmetry(bool pixels[805][605], vector<Stroke>& strokes,
 	}
 
 
+	
 	los.pointOnLine = int2(buildingOutline.bounds.x + bestX, buildingOutline.bounds.y);
 	los.direction = float2(bestDeltaX, 1);
-	los.direction = normal(los.direction);
+	los.CalculateVectors();
 
 	mirroredStroke1.points.clear();
 	mirroredStroke2.points.clear();
 		
-	EvaluateLOS(los, pixels, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
+	EvaluateLOS(los, pixels, pointNear, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
 
 	if (los.score == 0)
 		cout << "no symmetry detected (not enough points???)" << endl;
+	else
+		cout << "Score = " << los.score << endl;
+
+	if (strokes.size() > 0)
+		cout << strokes[0].points.size() << " points " << endl;
+
 
 	return los;
 }

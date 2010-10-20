@@ -10,7 +10,7 @@
 #include "Poly.h"
 
 
-#define DEBUGGING
+//#define DEBUGGING
 
 
 struct Bounds
@@ -31,14 +31,24 @@ struct Stroke
 struct LineOfSymmetry
 {
 	int2 pointOnLine;
-	// Unit-vectors for direction and perpendicular direction (direction rotated CCW by 0.5pi)
-	float2 direction, perpDirection;
+	// Unit-vector for direction
+	float2 direction;
+
+	// Unit vectors for perpendicular vectors (direction rotated CCW and CW by 0.5pi)
+	float2 ccwPerp, cwPerp;
 
 	LineOfSymmetry();
+	
+	// Normalises direction and calculates ccwPerp and cwPerp
+	void CalculateVectors();
+
+	// Project a vector along the line given by ccwPerp/cwPerp, and return the magnitude of the resulting vector
+	float ProjectedVectorMagnitude(float2 vec);
+
 	// For debugging
 	std::string ToString();
 
-	unsigned score;
+	int score;
 };
 
 struct Building

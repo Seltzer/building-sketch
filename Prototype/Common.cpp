@@ -36,17 +36,37 @@ void Stroke::CalculateBounds(void)
 
 
 LineOfSymmetry::LineOfSymmetry()
-	: pointOnLine(0,0), direction(0,0), perpDirection(0,0), score(0)
+	: pointOnLine(0,0), direction(0,0), ccwPerp(0,0), cwPerp(0,0), score(0)
 {
 }
 
+
+float LineOfSymmetry::ProjectedVectorMagnitude(float2 vec)
+{
+	float dist = (float) dot(vec, cwPerp);
+	
+	if (dist < 0)
+		dist = (float) dot(vec, ccwPerp);
+
+	assert(dist >= 0);
+	return dist;
+}
+
+void LineOfSymmetry::CalculateVectors()
+{
+	direction = normal(direction);
+
+	ccwPerp = float2(-direction.y, direction.x);
+	cwPerp = float2(direction.y, -direction.x);
+}
 
 string LineOfSymmetry::ToString()
 {
 	stringstream ss;
 	ss << "********** pointOnLine = " << pointOnLine.tostring() << "\n";
 	ss << "********** direction = " << direction.tostring() << "\n";
-	ss << "********** perpDirection = " << perpDirection.tostring() << "\n";
+	ss << "********** ccwPerp = " << ccwPerp.tostring() << "\n";
+	ss << "********** cwPerp = " << cwPerp.tostring() << "\n";
 
 	return ss.str();
 }
