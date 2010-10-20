@@ -107,20 +107,28 @@ void fillPloy(Bounds strokeBounds, int strokeID)
 	bool shouldFill;
 	std::vector<int> lastFlipLine;
 
-	for (int y = bounds.y; y <= (bounds.y+bounds.height); y++)
+	for (int y = bounds.y+1; y <= (bounds.y+bounds.height-1); y++)
 	{
 		shouldFill = false;
 		if (displacementMap.GetPixel(bounds.x,y) == black) shouldFill = true;
+		lastFlipLine.clear();
 		for (int x = bounds.x; x <= (bounds.x+bounds.width); x++)
 		{		
 			if (displacementVector[x][y].color == black)
 			{
 				if ((displacementVector[x][y].strokeID == strokeID)
 					&& (!contains(displacementVector[x][y].lineID, lastFlipLine))
-					&& !isPeak(x, y)) // && (displacementVector[x-1][y].color != black) /*&& (!displacementVector[x][y].intersectingLines)*/
+					&& (displacementVector[x-1][y].color != black)
+					)
 				{
-					shouldFill = !shouldFill;
-					lastFlipLine = displacementVector[x][y].lineID;
+					if ((!displacementVector[x][y].intersectingLines)
+						|| ((!isPeak(x,y))
+						&& (!isIntersectingAround(x,y))
+						)) // && (displacementVector[x-1][y].color != black) /*&& (!displacementVector[x][y].intersectingLines)*/
+					{
+						shouldFill = !shouldFill;
+						
+					}lastFlipLine = displacementVector[x][y].lineID;
 				}
 			}
 			if ((shouldFill) && (displacementVector[x][y].color == white)) displacementVector[x][y].color = gray;
@@ -144,9 +152,24 @@ bool contains(std::vector<int> v1, std::vector<int> v2)
 	return false;
 }
 
-// Check if this point is a peak or trough
-// ie. it is not connected to another line either above or below it.
-// and neither on its left nor right.
+bool isIntersectingAround(int x, int y)
+{
+	bool isIntersecting = false; 
+	if ((displacementVector[x][y+1].intersectingLines) || 
+		(displacementVector[x-1][y+1].intersectingLines) || 
+		(displacementVector[x+1][y+1].intersectingLines) || 
+		(displacementVector[x][y-1].intersectingLines) || 
+		(displacementVector[x-1][y-1].intersectingLines) || 
+		(displacementVector[x+1][y-1].intersectingLines))
+		isIntersecting = true;
+	return isIntersecting;
+}
+
+/*
+ * Check if this point is a peak or trough
+ * ie. it is not connected to another line either above or below it.
+ * and neither on its left nor right.
+ */
 bool isPeak(int x, int y)
 {
 	bool isPeak = false;
