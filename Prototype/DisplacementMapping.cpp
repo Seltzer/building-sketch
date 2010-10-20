@@ -8,6 +8,10 @@ std::vector<std::vector<PixelData>> displacementVector;
 sf::Color black = sf::Color(0, 0, 0, 255);
 sf::Color gray = sf::Color(128, 128, 128, 255);
 sf::Color white = sf::Color(255, 255, 255, 255);
+sf::Color red = sf::Color(255, 0, 0, 255);
+sf::Color blue = sf::Color(0, 0, 255, 255);
+sf::Color green = sf::Color(0, 255, 0, 255);
+sf::Color yellow = sf::Color(255, 255, 0, 255);
 int width;
 int height;
 
@@ -44,11 +48,11 @@ void generateDisplacementMap(Bounds bounds, std::vector<Stroke>& featureStrokes)
 			plotLine(point.x, oldPoint.x, point.y, oldPoint.y, i, j);
 			oldPoint = point;
 		}
-		fillPloy(stroke.bounds, i);		
+		fillPloy(stroke, i);		
 	}
 
 	vectorToImage();
-	displacementMap.SaveToFile("displacement_map.jpg");
+	displacementMap.SaveToFile("displacement_map.png");
 }
 
 void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
@@ -80,7 +84,7 @@ void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 			}
 			displacementVector[y][x].color = black;
 			displacementVector[y][x].strokeID = strokeID;			
-			displacementVector[y][x].lineID.push_back(lineID);
+			displacementVector[y][x].lineID = lineID;
 		} 
 		else
 		{
@@ -90,7 +94,7 @@ void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 			}
 			displacementVector[x][y].color = black;
 			displacementVector[x][y].strokeID = strokeID;
-			displacementVector[x][y].lineID.push_back(lineID);
+			displacementVector[x][y].lineID = lineID;
 		}
 		error = error - deltay;
 		if (error < 0)
@@ -101,37 +105,70 @@ void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 	}
 }
 
-void fillPloy(Bounds strokeBounds, int strokeID)
+void fillPloy(Stroke stroke, int strokeID)
 {
-	Bounds bounds = strokeBounds;
+	Bounds bounds = stroke.bounds;
 	bool shouldFill;
+	bool noChange;
 	std::vector<int> lastFlipLine;
 
 	for (int y = bounds.y+1; y <= (bounds.y+bounds.height-1); y++)
 	{
 		shouldFill = false;
+		noChange = false;
 		if (displacementMap.GetPixel(bounds.x,y) == black) shouldFill = true;
 		lastFlipLine.clear();
 		for (int x = bounds.x; x <= (bounds.x+bounds.width); x++)
 		{		
 			if (displacementVector[x][y].color == black)
 			{
+				if (noChange)
+				{	
+					displacementVector[x][y].color = green;
+				}
+
 				if ((displacementVector[x][y].strokeID == strokeID)
-					&& (!contains(displacementVector[x][y].lineID, lastFlipLine))
-					&& (displacementVector[x-1][y].color != black)
+					//&& (!contains(displacementVector[x][y].lineID, lastFlipLine))
 					)
 				{
 					if ((!displacementVector[x][y].intersectingLines)
-						|| ((!isPeak(x,y))
+						|| ((!isPeak(x,y, stroke, strokeID))
 						&& (!isIntersectingAround(x,y))
-						)) // && (displacementVector[x-1][y].color != black) /*&& (!displacementVector[x][y].intersectingLines)*/
+						)) 
 					{
-						shouldFill = !shouldFill;
-						
-					}lastFlipLine = displacementVector[x][y].lineID;
+						if ((!noChange) || (displacementVector[x-1][y].lineID != displacementVector[x][y].lineID))
+						{
+							shouldFill = !shouldFill;
+							noChange = true;
+						}
+					}
+					if (displacementVector[x][y].intersectingLines)
+					{
+						displacementVector[x][y].color = yellow;
+					}
+					if ((displacementVector[x][y].intersectingLines)
+						&& (isPeak(x,y, stroke, strokeID)))
+					{	
+						if (noChange) shouldFill = !shouldFill;
+						noChange = true;
+						displacementVector[x][y].color = blue;
+					}
 				}
 			}
-			if ((shouldFill) && (displacementVector[x][y].color == white)) displacementVector[x][y].color = gray;
+			else
+			{
+				noChange = false;
+			}
+			if (shouldFill)
+			{
+				if (displacementVector[x][y].color == white)
+				{
+					displacementVector[x][y].color = gray;
+				} else
+				{
+					//displacementVector[x][y].color = red;
+				}
+			}
 		}
 	}
 }
@@ -170,19 +207,32 @@ bool isIntersectingAround(int x, int y)
  * ie. it is not connected to another line either above or below it.
  * and neither on its left nor right.
  */
-bool isPeak(int x, int y)
+bool isPeak(int x, int y, Stroke stroke, int pointID1)
 {
-	bool isPeak = false;
-	// Check above
-	if ((displacementVector[x][y-1].color != black)
-		&& (displacementVector[x-1][y-1].color != black)
-		&& (displacementVector[x+1][y-1].color != black))
-		isPeak = true;
-	// Check below
-	if ((displacementVector[x][y+1].color != black)
-		&& (displacementVector[x-1][y+1].color != black)
-		&& (displacementVector[x+1][y+1].color != black))
-		isPeak = true;
+	//TODO FIX!
+	int pointPos = -1;
+	for (int i = 0; i <= stroke.points.size()-1; i++) 
+	{
+		int2 point = stroke.points[i];
+		if ((point.x == x) && (point.y == y))
+		{
+			pointPos = i;
+			break;
+		}
+	}
+	if (pointPos == -1) return false;
+
+	int prevPointPos = (pointPos == 0) ? stroke.points.size()-2 : pointPos-1;
+	int leftY = stroke.points[prevPointPos].y;
+
+	int nextPointPos = (pointPos == stroke.points.size()-1) ? 1 : pointPos+1;
+	int rightY = stroke.points[nextPointPos].y;
+	
+	bool isPeak = true;
+	if (((leftY >= y) && (rightY <=y))
+	   || ((leftY <= y) && (rightY >=y)))
+	isPeak = false;
+
 	return isPeak;
 }
 
