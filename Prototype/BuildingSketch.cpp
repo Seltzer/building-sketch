@@ -19,7 +19,7 @@ using namespace std;
 
 
 BuildingSketch::BuildingSketch() 
-	: maxArea(0), buildingAlgorithm(EXTRUDE), rotationCount(8), mirrorSketch(false), filled(true), yaw(45), pitch(25), zoom(0), 
+	: maxArea(0), buildingAlgorithm(EXTRUDE), losApplicationPending(false), rotationCount(8), mirrorSketch(false), filled(true), yaw(45), pitch(25), zoom(0), 
 			windowSize(800, 600), mouseAction(NONE), showAxis(true), defaultAppString("Building Sketch")
 {	
 	verticalDivision = windowSize.x/2;
@@ -426,6 +426,8 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 		else if (Event.Key.Code == sf::Key::S)
 		{
 			los = CalculateSymmetry(pixels, pointNear, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
+			if (los.score > 0)
+				losApplicationPending = true;
 		}
 		// Increase the rations count for the rotation algorith.
 		else if (Event.Key.Code == sf::Key::Comma)

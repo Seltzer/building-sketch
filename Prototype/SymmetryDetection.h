@@ -15,6 +15,10 @@ LineOfSymmetry CalculateSymmetry(bool pixels[805][605], bool pointNear[805][605]
 // Evaluate a line of symmetry, and return a heuristic score
 void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][605], std::vector<Stroke>& strokes, Stroke& buildingOutline, Stroke& mirroredStroke1, Stroke& mirroredStroke2);
 
+// TODO this will return a vector of strokes, possibly in conjunction with data about which strokes constitute the building outline (could possibly be several, need to discuss this)
+void ApplyLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][605], std::vector<Stroke>& strokes, Stroke& buildingOutline, 
+						Stroke& mirroredStroke1, Stroke& mirroredStroke2, bool mirrorLeft);
+
 bool PointExistsNear(bool pixels[805][605], bool pointNear[805][605], const int2 position);
 
 bool EdgeExistsBetween(bool pixels[805][605], bool pointNear[805][605], const int2, const int2);

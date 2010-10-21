@@ -1,5 +1,6 @@
 #include "Common.h"
 #include <sstream>
+#include <iostream>
 
 using namespace std;
 
@@ -36,7 +37,7 @@ void Stroke::CalculateBounds(void)
 
 
 LineOfSymmetry::LineOfSymmetry()
-	: pointOnLine(0,0), direction(0,0), ccwPerp(0,0), cwPerp(0,0), score(0)
+	: pointOnLine(0,0), direction(0,0), ccwPerp(0,0), cwPerp(0,0), distanceFromOrigin(0), score(0)
 {
 }
 
@@ -48,7 +49,7 @@ float LineOfSymmetry::ProjectedVectorMagnitude(float2 vec)
 	if (dist < 0)
 		dist = (float) dot(vec, ccwPerp);
 
-	assert(dist >= 0);
+//	assert(dist >= 0);
 	return dist;
 }
 
@@ -58,6 +59,8 @@ void LineOfSymmetry::CalculateVectors()
 
 	ccwPerp = float2(-direction.y, direction.x);
 	cwPerp = float2(direction.y, -direction.x);
+
+	distanceFromOrigin = ProjectedVectorMagnitude(pointOnLine);
 }
 
 string LineOfSymmetry::ToString()

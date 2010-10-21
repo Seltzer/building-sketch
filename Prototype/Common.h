@@ -37,9 +37,13 @@ struct LineOfSymmetry
 	// Unit vectors for perpendicular vectors (direction rotated CCW and CW by 0.5pi)
 	float2 ccwPerp, cwPerp;
 
+	float distanceFromOrigin;
+
+
+
 	LineOfSymmetry();
 	
-	// Normalises direction and calculates ccwPerp and cwPerp
+	// Normalises direction and calculates ccwPerp, cwPerp and distanceFromOrigin
 	void CalculateVectors();
 
 	// Project a vector along the line given by ccwPerp/cwPerp, and return the magnitude of the resulting vector

@@ -63,6 +63,7 @@ private:		// Private fields
 
 	// Symmetry stuff
 	LineOfSymmetry los;							// last line of symmetry which was calculated
+	bool losApplicationPending;					// True if a 'good' line of symmetry has been calculated but not acted upon
 	Stroke mirroredStroke1, mirroredStroke2;	// these two are for testing symmetry
 		
 	// Building algorithm selection, algorithm params and Building output

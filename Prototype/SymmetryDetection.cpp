@@ -2,6 +2,9 @@
 
 #include <iostream>
 #include <map>
+#include <stack>
+#include <deque>
+
 
 using namespace std;
 
@@ -60,14 +63,6 @@ void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805]
 
 
 
-	// Calculate distance from origin to line of symmetry
-	// This is the projection of the los position vector on the los perpendicular vector for which theta <= pi
-	float originToLosDistance = los.ProjectedVectorMagnitude(los.pointOnLine);
-	#ifdef DEBUGGING
-		cout << "Distance of los from origin is " << originToLosDistance << endl;
-	#endif
-
-
 	// Iterate over all strokes
 	for (vector<Stroke>::iterator it = strokes.begin(); it < strokes.end(); it++)
 	{
@@ -76,14 +71,12 @@ void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805]
 		{
 			// For current point p:
 			float2 p = *it2;
-			//cout << "***** point p = " << p.tostring() << endl;
-		
-			// Calculate magnitude of projection of p (the point's position vector) on LOS
+					
+			// Calculate magnitude of projection of p (the point's position vector) on LOS perpendicular
 			float proj = los.ProjectedVectorMagnitude(p);
 
-			// Negative if the LOS is in between the origin and p
-			// Positive otherwise
-			float pointToLosDistance = proj - originToLosDistance;
+			// Negative if the LOS is in between the origin and p. Positive otherwise
+			float pointToLosDistance = proj - los.distanceFromOrigin;
 			
 
 			// Calculate vector between point and LOS
@@ -98,11 +91,7 @@ void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805]
 
 			// Draw counterpart
 			mirroredStroke1.points.push_back(int2(counterpartPosition.x, counterpartPosition.y));
-			/*
-			if (pointToLosDistance < 0)
-				mirroredStroke1.points.push_back(int2(counterpartPosition.x, counterpartPosition.y));
-			else 
-				mirroredStroke2.points.push_back(int2(counterpartPosition.x, counterpartPosition.y));*/
+
 
 
 			if ( (counterpartPosAsInts.x >= 0) && (counterpartPosAsInts.x <= 800) )
@@ -137,12 +126,14 @@ void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805]
 						}
 
 						// Update matchDistribution
-						if (matchDistribution.count(dist))
-							matchDistribution[dist] = matchDistribution[dist] + 1;
-						else
-							matchDistribution[dist] = 1;
+						int absDist = (int) fabs(pointToLosDistance);
 
-						if (dist > maxDistance)
+						if (matchDistribution.count(absDist))
+							matchDistribution[absDist] = matchDistribution[absDist] + 1;
+						else
+							matchDistribution[absDist] = 1;
+
+						if (absDist > maxDistance)
 							maxDistance = dist;
 
 						matches++;
@@ -193,12 +184,10 @@ void EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805]
 LineOfSymmetry CalculateSymmetry(bool pixels[805][605], bool pointNear[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, Stroke& mirroredStroke1, Stroke& mirroredStroke2)
 {
 	LineOfSymmetry los;
+	los.CalculateVectors();
+
 	buildingOutline.CalculateBounds();
 		
-	// For now, assume a vertical gradient for the los
-	los.direction = float2(0,1);
-	los.CalculateVectors();
-	
 	
 	int bestMatch = -100000;
 	// hack
@@ -212,11 +201,11 @@ LineOfSymmetry CalculateSymmetry(bool pixels[805][605], bool pointNear[805][605]
 		cout << "deltaX = " << deltaX << endl;
 
 		los.direction = float2(deltaX,1);
-		los.CalculateVectors();
-
+		
 		for (int x = 0; x < buildingOutline.bounds.width; x++)
 		{
 			los.pointOnLine = int2(buildingOutline.bounds.x + x, buildingOutline.bounds.y);
+			los.CalculateVectors();
 		//	cout << "trying at " << buildingOutline.bounds.x + x << endl;
 			
 			EvaluateLOS(los, pixels, pointNear, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
@@ -254,4 +243,90 @@ LineOfSymmetry CalculateSymmetry(bool pixels[805][605], bool pointNear[805][605]
 
 
 	return los;
+}
+
+
+void ApplyLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, 
+						Stroke& mirroredStroke1, Stroke& mirroredStroke2, bool mirrorLeft)
+{
+	vector<Stroke> outputStrokes;
+
+
+	// Iterate over all strokes
+	for (vector<Stroke>::iterator it = strokes.begin(); it < strokes.end(); it++)
+	{
+		vector<Stroke> outputStrokes;
+		outputStrokes.push_back(Stroke());
+		int currentStroke = 0;
+
+
+		// Counterparts on non-mirror side which will be added to stroke as soon as we leave the mirror side
+		stack<int2> counterpartsToAdd;
+		// Points on mirror side which will be added as soon as we enter the mirror side
+		deque<int2> pointsToAdd;
+
+		// Are we on the LOS or to the left or right?
+		enum Orientation { LEFT, CENTRE, RIGHT };
+		Orientation or = LEFT;
+
+
+		// Iterate over points of each stroke
+		for (vector<int2>::iterator it2 = (*it).points.begin(); it2 < (*it).points.end(); it2++)
+		{
+			// For current point p:
+			float2 p = *it2;
+					
+			// Calculate magnitude of projection of p (the point's position vector) on LOS
+			float proj = los.ProjectedVectorMagnitude(p);
+			// Negative if the LOS is in between the origin and p. Positive otherwise
+			float pointToLosDistance = proj - los.distanceFromOrigin;
+				
+
+			if (mirrorLeft)
+			{
+				if (pointToLosDistance > 0)
+				{
+					or = RIGHT;
+					// Point is to the right of LOS, so ignore it
+					continue;
+				}
+				
+				if ( (or == LEFT) || (or == CENTRE) )
+				{
+					// We were already in the centre, so add p to current stroke
+					outputStrokes[currentStroke].points.push_back(p);
+
+					if (pointToLosDistance == 0)
+					{
+						or = CENTRE;
+						// Centre points don't have counterparts
+					}
+					else
+					{
+						or = LEFT;
+
+						// Calculate position of counterpart point, and add point to stack			
+						float2 counterpartPosition = p + 2 * pointToLosDistance * los.ccwPerp; 
+						int2 counterpartPosAsInts(counterpartPosition.x, counterpartPosition.y);
+
+						//counterpartsInStroke.
+					}
+				}
+				else
+				{
+					// We are transitioning from right to left, so create a new stroke
+				}
+			}
+			else
+			{
+
+
+			}
+		}
+	}
+
+	// Remove points outside bounds
+	// Combine strokes if possible
+
+	// return new strokes
 }
