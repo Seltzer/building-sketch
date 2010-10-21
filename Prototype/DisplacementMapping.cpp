@@ -14,6 +14,9 @@ sf::Color green = sf::Color(0, 255, 0, 255);
 sf::Color yellow = sf::Color(255, 255, 0, 255);
 sf::Color magenta = sf::Color(255, 0, 255, 255);
 sf::Color cyan = sf::Color(0, 255, 255, 255);
+sf::Color purple = sf::Color(163, 73, 163, 255);
+sf::Color lightgray = sf::Color(200, 200, 200, 255);
+
 int width;
 int height;
 
@@ -109,13 +112,18 @@ void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 
 void fillPloy(Stroke stroke, int strokeID)
 {
+	std::cout << "FILL POLY ID: " << strokeID << std::endl << "====================================================" << std::endl << std::endl;
 	Bounds bounds = stroke.bounds;
 	bool shouldFill;
 	bool noChange;
+	bool flatLineCheck;
+	bool flatPeakCheck;
 	std::vector<int> lastFlipLine;
 
 	for (int y = bounds.y+1; y <= (bounds.y+bounds.height-1); y++)
 	{
+		flatLineCheck = false;
+		flatPeakCheck = false;
 		shouldFill = false;
 		noChange = false;
 		if (displacementMap.GetPixel(bounds.x,y) == black) shouldFill = true;
@@ -128,27 +136,30 @@ void fillPloy(Stroke stroke, int strokeID)
 				// If this pixel is an edge
 				if (displacementVector[x][y].color == black)
 				{									
-					// DEBUG
-					if (noChange)
-						displacementVector[x][y].color = green;
 					// If this pixel is part of 2 or more lines
 					if (displacementVector[x][y].intersectingLines)
 					{
-						displacementVector[x][y].color = yellow;
 						// If this pixel is at a spike (see isSpike)
-						if (isSpike(x,y, stroke, strokeID))
+						if (isSpike(x, y, stroke, strokeID))
 						{
+							displacementVector[x][y].color = yellow;
 							if (noChange) {
-								shouldFill = !shouldFill;
+								// Check for a flat line
+								if ((!flatPeakCheck) && (!flatLineCheck))shouldFill = !shouldFill;
 								displacementVector[x][y].color = blue;
-							} else
+								flatLineCheck = !flatLineCheck;
+								flatPeakCheck = false;
+							} 
+							else
 							{
 								displacementVector[x][y].color = red;
-							}
+								flatPeakCheck = true;
+							}								
 							noChange = true;
 						}
 						else
-						{
+						{	
+							displacementVector[x][y].color = lightgray;
 							if ((!noChange) || (!contains(displacementVector[x-1][y].lineID, displacementVector[x][y].lineID)))
 							{
 								if (!isIntersectingAround(x,y))
@@ -170,16 +181,9 @@ void fillPloy(Stroke stroke, int strokeID)
 					{
 						if ((!noChange) || (!contains(displacementVector[x-1][y].lineID, displacementVector[x][y].lineID)))
 						{
+							displacementVector[x][y].color = purple;
 							shouldFill = !shouldFill;
 							noChange = true;
-						}
-
-						// If this pixel is at a spike (see isSpike)
-						if (isSpike(x,y, stroke, strokeID))
-						{
-						}
-						else
-						{
 						}
 					}
 				}		
@@ -187,6 +191,8 @@ void fillPloy(Stroke stroke, int strokeID)
 			else // If this pixel is not an edge.
 			{
 				noChange = false;
+				flatPeakCheck = false;
+				flatLineCheck = false;
 			}
 			// If the pixel should be filled.
 			if (shouldFill)
@@ -194,9 +200,6 @@ void fillPloy(Stroke stroke, int strokeID)
 				if (displacementVector[x][y].color == white)
 				{
 					displacementVector[x][y].color = gray;
-				} else
-				{
-					//displacementVector[x][y].color = red;
 				}
 			}
 		}
@@ -280,14 +283,20 @@ bool isIntersectingAround(int x, int y)
 }
 
 /*
- * Check if this point is a peak or trough
- * ie. it is not connected to another line either above or below it.
- * and neither on its left nor right.
+ * Check if this point is a spike.
+ * ie. is it a pointy bit. (angle less than or equal to 90degrees)
+ *
+ * return true if it is a spike.
+ * return false if it is not.
  */
 bool isSpike(int x, int y, Stroke stroke, int pointID1)
 {
 	//TODO FIX!
 	int pointPos = -1;
+	int leftY = y, rightY = y;
+
+	// Find which vertex this is. There will be only one
+	// as per the nature of recording them.
 	for (int i = 0; i <= stroke.points.size()-1; i++) 
 	{
 		int2 point = stroke.points[i];
@@ -299,18 +308,27 @@ bool isSpike(int x, int y, Stroke stroke, int pointID1)
 	}
 	if (pointPos == -1) return false;
 
-	int prevPointPos = (pointPos == 0) ? stroke.points.size()-2 : pointPos-1;
-	int leftY = stroke.points[prevPointPos].y;
-
-	int nextPointPos = (pointPos == stroke.points.size()-1) ? 1 : pointPos+1;
-	int rightY = stroke.points[nextPointPos].y;
+	// Get the left and right points. If the left or right points are at the exact same
+	// y value, get the next point. We do not want to deal with horizontal lines. They are evil.
+	int newLeftPos = pointPos;
+	while (leftY == y)
+	{
+		int prevPointPos = (newLeftPos == 0) ? stroke.points.size()-2 : newLeftPos-1;
+		leftY = stroke.points[prevPointPos].y;
+		newLeftPos--;
+	}
+	int newRightPos = pointPos;
+	while (rightY == y)
+	{
+		int nextPointPos = (newRightPos == stroke.points.size()-1) ? 1 : newRightPos+1;
+		rightY = stroke.points[nextPointPos].y;
+		newRightPos++;
+	}
 	
-	bool isPeak = true;
-	if (((leftY >= y) && (rightY <=y))
-	   || ((leftY <= y) && (rightY >=y)))
-	isPeak = false;
-
-	return isPeak;
+	if (((leftY >= y) && (rightY <= y))
+	   || ((leftY <= y) && (rightY >= y)))
+	return false;
+	return true;
 }
 
 /*
