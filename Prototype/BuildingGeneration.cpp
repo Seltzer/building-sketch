@@ -50,6 +50,7 @@ void ExtrudeSketch(Building& building, vector<int2>& outline, vector<Stroke>& pr
 	building.polys.push_back(b);
 
 	// Work out the feature polygons
+	/*
 	for (std::vector<Stroke>::iterator s = processedFeatureOutlines.begin();
 		s != processedFeatureOutlines.end(); s++)
 	{
@@ -86,7 +87,7 @@ void ExtrudeSketch(Building& building, vector<int2>& outline, vector<Stroke>& pr
 
 		building.polys.push_back(featurePolyFront);
 		building.polys.push_back(featurePolyBack);
-	}
+	}*/
 
 	building.bounds.depth = (int)depth;
 }

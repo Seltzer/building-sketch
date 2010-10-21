@@ -243,9 +243,9 @@ void BuildingSketch::DrawSolid(const Poly poly)
 	if (filled) {
 		glColor3f((249.0/255.0), (249.0/255.0), (240.0/255.0));
 		buildingShader->Enable(true);
-		displacementMap2.Bind();
+		displacementMap.Bind();
 
-		buildingShader->BindTexture(displacementMap2, "reliefmap", 0);
+		buildingShader->BindTexture(displacementMap, "reliefmap", 0);
 		buildingShader->BindTexture(normalMap, "normalmap", 1);
 
 
@@ -297,8 +297,8 @@ void BuildingSketch::RenderLoop()
 	ChangeWindowTitle(defaultAppString + " - Extrusion Mode");
 
 	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Memory leak
-	displacementMap2.LoadFromFile("collage_height.jpg");
-	normalMap = heightToNormal(displacementMap2);
+	//displacementMap2.LoadFromFile("collage_height.jpg");
+	normalMap = heightToNormal(displacementMap);
 
 	while (win->IsOpened())
 	{
@@ -482,8 +482,6 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 		MouseReleased(int2(Event.MouseMove.X, Event.MouseMove.Y));
 	if (Event.Type == sf::Event::MouseWheelMoved)
 		MouseWheelMoved(Event.MouseWheel.Delta);
-	if (Event.Type == sf::Event::MouseLeft)
-		MouseReleased(int2(Event.MouseMove.X, Event.MouseMove.Y));
 }
 
 void BuildingSketch::MousePressed(int2 pos)
@@ -527,6 +525,10 @@ void BuildingSketch::MouseMoved(int2 pos)
 	{
 		case DRAWING:
 		{
+			// Don't go beyone vertical division
+			if (pos.x > verticalDivision)
+				pos.x = verticalDivision;
+
 			// If we are drawing record movements.
 			currentStroke.points.push_back(pos);
 			pixels[pos.x][pos.y] = true;

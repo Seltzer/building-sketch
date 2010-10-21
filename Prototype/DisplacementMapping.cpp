@@ -42,24 +42,42 @@ void generateDisplacementMap(Bounds bounds, std::vector<Stroke>& featureStrokes)
 	// Set up the displacement image.
 	displacementMap.Create(width, height, white);
 
+	bool outOfBounds;
 	for (int i = 0; i <= featureStrokes.size()-1; i++)
 	{
+		// Check for out of bounds
 		Stroke stroke = featureStrokes[i];
-		//Stroke stroke = (*strokeItterator);
-		int2 oldPoint = stroke.points[0];
-		for (int j = 0; j <= stroke.points.size()-1; j++)
+		outOfBounds = false;
+		for (int l = 0; l <= stroke.points.size()-1; l++)
 		{			
-			int2 point = stroke.points[j];
-			plotLine(point.x, oldPoint.x, point.y, oldPoint.y, i, j);
-			oldPoint = point;
+			int2 point = stroke.points[l];
+			if ((point.x < 0) || (point.x > width-1)
+				||(point.y < 0) || (point.y > height-1))
+			{
+				outOfBounds = true;
+			}
+		}		
+
+		if (!outOfBounds) {
+			// Draw Lines
+			int2 oldPoint = stroke.points[0];
+			for (int j = 0; j <= stroke.points.size()-1; j++)
+			{			
+				int2 point = stroke.points[j];
+				
+				plotLine(point.x, oldPoint.x, point.y, oldPoint.y, i, j);
+				oldPoint = point;
+			}
+			// Fill Polygon
+			fillPloy(stroke, i);	
 		}
-		fillPloy(stroke, i);		
 	}
 
 	vectorToImage();
 	displacementMap.SaveToFile("displacement_map.png");
 }
 
+/* Bresenham's line algorithm */
 void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 {	
 	bool steep = abs(y1-y0) > abs(x1-x0);
@@ -83,21 +101,21 @@ void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 	{
 		if (steep)
 		{
-			if ((displacementVector[y][x].color == black) && (displacementVector[y][x].strokeID == strokeID))
+			if ((displacementVector[y][x].color == gray) && (displacementVector[y][x].strokeID == strokeID))
 			{
 				displacementVector[y][x].intersectingLines = true;
 			}
-			displacementVector[y][x].color = black;
+			displacementVector[y][x].color = gray;
 			displacementVector[y][x].strokeID = strokeID;	
 			displacementVector[y][x].lineID.push_back(lineID);
 		} 
 		else
 		{
-			if ((displacementVector[x][y].color == black) && (displacementVector[x][y].strokeID == strokeID))
+			if ((displacementVector[x][y].color == gray) && (displacementVector[x][y].strokeID == strokeID))
 			{
 				displacementVector[x][y].intersectingLines = true;				
 			}
-			displacementVector[x][y].color = black;
+			displacementVector[x][y].color = gray;
 			displacementVector[x][y].strokeID = strokeID;
 			displacementVector[x][y].lineID.push_back(lineID);
 		}
@@ -110,31 +128,27 @@ void plotLine(int x0, int x1, int y0, int y1, int strokeID, int lineID)
 	}
 }
 
+/* Sutirtha's scan fill algorithm (Oh god, why couldn't I find a good one online) */
 void fillPloy(Stroke stroke, int strokeID)
 {
-	std::cout << "FILL POLY ID: " << strokeID << std::endl << "====================================================" << std::endl << std::endl;
-	Bounds bounds = stroke.bounds;
 	bool shouldFill;
-	bool noChange;
+	bool staySame;
 	bool flatLineCheck;
 	bool flatPeakCheck;
-	std::vector<int> lastFlipLine;
 
-	for (int y = bounds.y+1; y <= (bounds.y+bounds.height-1); y++)
+	for (int y = stroke.bounds.y+1; y <= (stroke.bounds.y+stroke.bounds.height-1); y++)
 	{
 		flatLineCheck = false;
 		flatPeakCheck = false;
 		shouldFill = false;
-		noChange = false;
-		if (displacementMap.GetPixel(bounds.x,y) == black) shouldFill = true;
-		lastFlipLine.clear();
-		for (int x = bounds.x; x <= (bounds.x+bounds.width); x++)
+		staySame = false;
+		for (int x = stroke.bounds.x; x <= (stroke.bounds.x+stroke.bounds.width); x++)
 		{		
 			// If this pixel is part of the feature stroke
 			if (displacementVector[x][y].strokeID == strokeID)
 			{
 				// If this pixel is an edge
-				if (displacementVector[x][y].color == black)
+				if (displacementVector[x][y].color == gray)
 				{									
 					// If this pixel is part of 2 or more lines
 					if (displacementVector[x][y].intersectingLines)
@@ -142,55 +156,51 @@ void fillPloy(Stroke stroke, int strokeID)
 						// If this pixel is at a spike (see isSpike)
 						if (isSpike(x, y, stroke, strokeID))
 						{
-							displacementVector[x][y].color = yellow;
-							if (noChange) {
-								// Check for a flat line
+							if (staySame) {
+								// Check for a flat lines
 								if ((!flatPeakCheck) && (!flatLineCheck))shouldFill = !shouldFill;
-								displacementVector[x][y].color = blue;
 								flatLineCheck = !flatLineCheck;
 								flatPeakCheck = false;
 							} 
 							else
 							{
-								displacementVector[x][y].color = red;
 								flatPeakCheck = true;
 							}								
-							noChange = true;
+							staySame = true;
 						}
-						else
+						else // An intersection pixel that is not a spike
 						{	
-							displacementVector[x][y].color = lightgray;
-							if ((!noChange) || (!contains(displacementVector[x-1][y].lineID, displacementVector[x][y].lineID)))
+							// Check if the last line was a different line (semi-attempt to work with self-intersecting polygons)
+							if ((!staySame) || (!contains(displacementVector[x-1][y].lineID, displacementVector[x][y].lineID)))
 							{
+								// Check if this pixel is got intersecting pixels around it. (semi-attempt to work with self-intersecting polygons)
 								if (!isIntersectingAround(x,y))
 								{
-									displacementVector[x][y].color = magenta;
 									shouldFill = !shouldFill;
-									noChange = true;
+									staySame = true;
 								} else
 								{
-									displacementVector[x][y].color = cyan;
-									if (noChange)
+									if (staySame)
 										shouldFill = !shouldFill;
-									noChange = true;
+									staySame = true;
 								}
 							}
 						}
 					}
-					else
+					else // Not an intersection pixel! Easy!
 					{
-						if ((!noChange) || (!contains(displacementVector[x-1][y].lineID, displacementVector[x][y].lineID)))
+						// Check if the last line was a different line (semi-attempt to work with self-intersecting polygons)
+						if ((!staySame) || (!contains(displacementVector[x-1][y].lineID, displacementVector[x][y].lineID)))
 						{
-							displacementVector[x][y].color = purple;
 							shouldFill = !shouldFill;
-							noChange = true;
+							staySame = true;
 						}
 					}
 				}		
 			}
 			else // If this pixel is not an edge.
 			{
-				noChange = false;
+				staySame = false;
 				flatPeakCheck = false;
 				flatLineCheck = false;
 			}
@@ -199,7 +209,11 @@ void fillPloy(Stroke stroke, int strokeID)
 			{
 				if (displacementVector[x][y].color == white)
 				{
-					displacementVector[x][y].color = gray;
+					displacementVector[x][y].color = black;
+				}
+				else if (displacementVector[x][y].color == black)
+				{
+					displacementVector[x][y].color = white;
 				}
 			}
 		}
@@ -226,6 +240,13 @@ bool isIntersectingAround(int x, int y)
 {
 	// TODO: check for pixels out of bounds
 	//		 re-write this function. yuk :(
+	if ((displacementVector[x][y+1].intersectingLines) || 
+		(displacementVector[x-1][y+1].intersectingLines) || 
+		(displacementVector[x+1][y+1].intersectingLines) || 
+		(displacementVector[x][y-1].intersectingLines) || 
+		(displacementVector[x-1][y-1].intersectingLines) || 
+		(displacementVector[x+1][y-1].intersectingLines))
+	return true;
 
 	std::vector<int> topLineID = displacementVector[x][y+1].lineID;
 	std::vector<int> topLeftLineID = displacementVector[x-1][y+1].lineID;
@@ -234,48 +255,40 @@ bool isIntersectingAround(int x, int y)
 	std::vector<int> bottomLineID = displacementVector[x][y-1].lineID;
 	std::vector<int> bottomLeftLineID = displacementVector[x-1][y-1].lineID;
 	std::vector<int> bottomRightLineID = displacementVector[x+1][y-1].lineID;
-
-	if ((displacementVector[x][y+1].intersectingLines) || 
-		(displacementVector[x-1][y+1].intersectingLines) || 
-		(displacementVector[x+1][y+1].intersectingLines) || 
-		(displacementVector[x][y-1].intersectingLines) || 
-		(displacementVector[x-1][y-1].intersectingLines) || 
-		(displacementVector[x+1][y-1].intersectingLines))
-	return true;
 	
 	if ((!contains(topLineID, topLeftLineID))
-		&& (displacementVector[x][y+1].color == black)
-		&& (displacementVector[x-1][y+1].color == black)
+		&& (displacementVector[x][y+1].color == gray)
+		&& (displacementVector[x-1][y+1].color == gray)
 		)
 	return true;
 
 	if ((!contains(topLineID, topRightLineID))
-		&& (displacementVector[x][y+1].color == black)
-		&& (displacementVector[x+1][y+1].color == black)
+		&& (displacementVector[x][y+1].color == gray)
+		&& (displacementVector[x+1][y+1].color == gray)
 		)
 	return true;
 
 	if ((!contains(topRightLineID, topLeftLineID))
-		&& (displacementVector[x-1][y+1].color == black)
-		&& (displacementVector[x+1][y+1].color == black)
+		&& (displacementVector[x-1][y+1].color == gray)
+		&& (displacementVector[x+1][y+1].color == gray)
 		)
 	return true;
 
 	if ((!contains(bottomLineID, bottomLeftLineID))
-		&& (displacementVector[x][y-1].color == black)
-		&& (displacementVector[x-1][y-1].color == black)
+		&& (displacementVector[x][y-1].color == gray)
+		&& (displacementVector[x-1][y-1].color == gray)
 		)
 		return true;
 
 	if ((!contains(bottomLineID, bottomRightLineID))
-		&& (displacementVector[x][y-1].color == black)
-		&& (displacementVector[x+1][y-1].color == black)
+		&& (displacementVector[x][y-1].color == gray)
+		&& (displacementVector[x+1][y-1].color == gray)
 		)
 		return true;
 
 	if ((!contains(bottomRightLineID, bottomLeftLineID))
-		&& (displacementVector[x-1][y-1].color == black)
-		&& (displacementVector[x+1][y-1].color == black)
+		&& (displacementVector[x-1][y-1].color == gray)
+		&& (displacementVector[x+1][y-1].color == gray)
 		)
 		return true;
 
@@ -340,7 +353,7 @@ void vectorToImage()
 	{
 		for (int y = 0; y <= height-1; y++) 
 		{
-			displacementMap.SetPixel(x, y, displacementVector[x][y].color);
+			displacementMap.SetPixel(x, height-1-y, displacementVector[x][y].color);
 		}
 	}
 }
