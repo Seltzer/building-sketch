@@ -12,6 +12,8 @@ sf::Color red = sf::Color(255, 0, 0, 255);
 sf::Color blue = sf::Color(0, 0, 255, 255);
 sf::Color green = sf::Color(0, 255, 0, 255);
 sf::Color yellow = sf::Color(255, 255, 0, 255);
+sf::Color magenta = sf::Color(255, 0, 255, 255);
+sf::Color cyan = sf::Color(0, 255, 255, 255);
 int width;
 int height;
 
@@ -120,51 +122,73 @@ void fillPloy(Stroke stroke, int strokeID)
 		lastFlipLine.clear();
 		for (int x = bounds.x; x <= (bounds.x+bounds.width); x++)
 		{		
-			if (displacementVector[x][y].color == black)
+			// If this pixel is part of the feature stroke
+			if (displacementVector[x][y].strokeID == strokeID)
 			{
-				if (noChange)
-				{	
-					displacementVector[x][y].color = green;
-				}
-
-				if ((displacementVector[x][y].strokeID == strokeID)
-					//&& (!contains(displacementVector[x][y].lineID, lastFlipLine))
-					)
-				{
-					if ((!displacementVector[x][y].intersectingLines)
-						|| ((!isPeak(x,y, stroke, strokeID))
-						&& (!isIntersectingAround(x,y))
-						)) 
+				// If this pixel is an edge
+				if (displacementVector[x][y].color == black)
+				{									
+					// DEBUG
+					if (noChange)
+						displacementVector[x][y].color = green;
+					// If this pixel is part of 2 or more lines
+					if (displacementVector[x][y].intersectingLines)
+					{
+						displacementVector[x][y].color = yellow;
+						// If this pixel is at a spike (see isSpike)
+						if (isSpike(x,y, stroke, strokeID))
+						{
+							if (noChange) {
+								shouldFill = !shouldFill;
+								displacementVector[x][y].color = blue;
+							} else
+							{
+								displacementVector[x][y].color = red;
+							}
+							noChange = true;
+						}
+						else
+						{
+							if ((!noChange) || (!contains(displacementVector[x-1][y].lineID, displacementVector[x][y].lineID)))
+							{
+								if (!isIntersectingAround(x,y))
+								{
+									displacementVector[x][y].color = magenta;
+									shouldFill = !shouldFill;
+									noChange = true;
+								} else
+								{
+									displacementVector[x][y].color = cyan;
+									if (noChange)
+										shouldFill = !shouldFill;
+									noChange = true;
+								}
+							}
+						}
+					}
+					else
 					{
 						if ((!noChange) || (!contains(displacementVector[x-1][y].lineID, displacementVector[x][y].lineID)))
 						{
 							shouldFill = !shouldFill;
 							noChange = true;
 						}
-					}
-					if (displacementVector[x][y].intersectingLines)
-					{
-						displacementVector[x][y].color = yellow;
-					}
-					if ((displacementVector[x][y].intersectingLines)
-						&& (isPeak(x,y, stroke, strokeID)))
-					{	
-						if (noChange) {
-							shouldFill = !shouldFill;
-							displacementVector[x][y].color = blue;
-						} else
+
+						// If this pixel is at a spike (see isSpike)
+						if (isSpike(x,y, stroke, strokeID))
 						{
-							displacementVector[x][y].color = red;
 						}
-						noChange = true;
-						
+						else
+						{
+						}
 					}
-				}
+				}		
 			}
-			else
+			else // If this pixel is not an edge.
 			{
 				noChange = false;
 			}
+			// If the pixel should be filled.
 			if (shouldFill)
 			{
 				if (displacementVector[x][y].color == white)
@@ -178,8 +202,8 @@ void fillPloy(Stroke stroke, int strokeID)
 		}
 	}
 }
-
-// TODO: Change this to a bit flag instead of vector. Bah humbug!
+		
+// TODO: Change this to a bit flag instead of vector.
 bool contains(std::vector<int> v1, std::vector<int> v2)
 {
 	if (v1.empty()) return false;
@@ -197,15 +221,62 @@ bool contains(std::vector<int> v1, std::vector<int> v2)
 
 bool isIntersectingAround(int x, int y)
 {
-	bool isIntersecting = false; 
+	// TODO: check for pixels out of bounds
+	//		 re-write this function. yuk :(
+
+	std::vector<int> topLineID = displacementVector[x][y+1].lineID;
+	std::vector<int> topLeftLineID = displacementVector[x-1][y+1].lineID;
+	std::vector<int> topRightLineID = displacementVector[x+1][y+1].lineID;
+
+	std::vector<int> bottomLineID = displacementVector[x][y-1].lineID;
+	std::vector<int> bottomLeftLineID = displacementVector[x-1][y-1].lineID;
+	std::vector<int> bottomRightLineID = displacementVector[x+1][y-1].lineID;
+
 	if ((displacementVector[x][y+1].intersectingLines) || 
 		(displacementVector[x-1][y+1].intersectingLines) || 
 		(displacementVector[x+1][y+1].intersectingLines) || 
 		(displacementVector[x][y-1].intersectingLines) || 
 		(displacementVector[x-1][y-1].intersectingLines) || 
 		(displacementVector[x+1][y-1].intersectingLines))
-		isIntersecting = true;
-	return isIntersecting;
+	return true;
+	
+	if ((!contains(topLineID, topLeftLineID))
+		&& (displacementVector[x][y+1].color == black)
+		&& (displacementVector[x-1][y+1].color == black)
+		)
+	return true;
+
+	if ((!contains(topLineID, topRightLineID))
+		&& (displacementVector[x][y+1].color == black)
+		&& (displacementVector[x+1][y+1].color == black)
+		)
+	return true;
+
+	if ((!contains(topRightLineID, topLeftLineID))
+		&& (displacementVector[x-1][y+1].color == black)
+		&& (displacementVector[x+1][y+1].color == black)
+		)
+	return true;
+
+	if ((!contains(bottomLineID, bottomLeftLineID))
+		&& (displacementVector[x][y-1].color == black)
+		&& (displacementVector[x-1][y-1].color == black)
+		)
+		return true;
+
+	if ((!contains(bottomLineID, bottomRightLineID))
+		&& (displacementVector[x][y-1].color == black)
+		&& (displacementVector[x+1][y-1].color == black)
+		)
+		return true;
+
+	if ((!contains(bottomRightLineID, bottomLeftLineID))
+		&& (displacementVector[x-1][y-1].color == black)
+		&& (displacementVector[x+1][y-1].color == black)
+		)
+		return true;
+
+	return false;
 }
 
 /*
@@ -213,7 +284,7 @@ bool isIntersectingAround(int x, int y)
  * ie. it is not connected to another line either above or below it.
  * and neither on its left nor right.
  */
-bool isPeak(int x, int y, Stroke stroke, int pointID1)
+bool isSpike(int x, int y, Stroke stroke, int pointID1)
 {
 	//TODO FIX!
 	int pointPos = -1;
