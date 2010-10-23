@@ -74,11 +74,13 @@ private:		// Private fields
 	
 		
 	// Building algorithm selection, algorithm params and Building output
-	enum BUILDING_ALGORITHM { EXTRUDE, ROTATE, MIRROR};
+	enum BUILDING_ALGORITHM { EXTRUDE, ROTATE, MIRROR, DETECT};
 	BUILDING_ALGORITHM buildingAlgorithm;
 	int rotationCount;
 	bool mirrorSketch;
 	Building building;
+
+	BUILDING_ALGORITHM SelectAlgorithm(Bounds bounds, std::vector<int2> outline, std::vector<Stroke> processedFeatureOutlines);
 
 	// Windowing / OpenGL stuff
 	sf::RenderWindow* win;

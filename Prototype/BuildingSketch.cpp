@@ -31,7 +31,21 @@ BuildingSketch::~BuildingSketch()
 {
 	CleanUpSymmetry();
 }
+bool IsCurved(const Stroke stroke)
+{
+	return false;
+}
 
+BuildingSketch::BUILDING_ALGORITHM BuildingSketch::SelectAlgorithm(Bounds bounds, vector<int2> outline, vector<Stroke> processedFeatureOutlines)
+{
+	// Determine if round. While ideally we would determine if parts of the building are round, for now we will just do the whole thing
+	
+
+	if (bounds.height > 1.5f * bounds.width)
+		return MIRROR;
+	else
+		return EXTRUDE;
+}
 
 void BuildingSketch::UpdateBuilding()
 {
@@ -85,8 +99,14 @@ void BuildingSketch::UpdateBuilding()
 	}
 	// Generate the displacement map
 	generateDisplacementMap(building.bounds, displacementMapStrokes);
+	normalMap = heightToNormal(displacementMap);
 
-	switch (buildingAlgorithm)
+	BUILDING_ALGORITHM algo = buildingAlgorithm;
+
+	if (buildingAlgorithm == DETECT)
+		algo = SelectAlgorithm(building.bounds, outline, processedFeatureOutlines);
+
+	switch (algo)
 	{
 		case EXTRUDE:	// Algorithm to create an extruded building
 		{	
@@ -297,6 +317,7 @@ void BuildingSketch::RenderLoop()
 
 	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Memory leak
 	//displacementMap2.LoadFromFile("collage_height.jpg");
+	displacementMap.Create(32, 32); // Blank map to begin with
 	normalMap = heightToNormal(displacementMap);
 
 	while (win->IsOpened())
@@ -378,6 +399,10 @@ void BuildingSketch::UpdateWindowTitle()
 			break;
 		case ROTATE:
 			newTitle.append(" - Rotation Mode with arity of " + ConvertToString<int>(rotationCount));
+			break;
+		case DETECT:
+			newTitle.append(" - Detect Mode");
+			break;
 	}
 
 	ChangeWindowTitle(newTitle);
@@ -525,6 +550,11 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 					break;
 				}
 				case MIRROR:
+				{
+					buildingAlgorithm = DETECT;
+					break;
+				}
+				case DETECT:
 				{
 					buildingAlgorithm = EXTRUDE;
 					break;

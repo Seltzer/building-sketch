@@ -17,6 +17,8 @@ void ExtrudeSketch(Building& building, vector<int2>& outline, vector<Stroke>& pr
 	polyBack.reserve(outline.size());
 	polySide.reserve(4);
 
+	float tangScale = float(building.bounds.height) / building.bounds.width; // Hack to fix distortion
+
 	// The depth is 80% of the building width.
 	float depth = 0.8f*abs(building.bounds.width);
 
@@ -41,11 +43,11 @@ void ExtrudeSketch(Building& building, vector<int2>& outline, vector<Stroke>& pr
 	float2 uvStart(-building.bounds.width/2.0f, -building.bounds.height/2.0f);
 	float2 uvEnd(building.bounds.width/2.0f, building.bounds.height/2.0f);
 	Poly f(polyFront);
-	f.SetNormals(float3(0, 0, 1), float3(1, 0, 0), float3(0, 1, 0));
+	f.SetNormals(float3(0, 0, 1), float3(1, 0, 0) * tangScale, float3(0, 1, 0));
 	f.SetTexMapping(float3(1, 0, 0), float3(0, 1, 0), uvStart, uvEnd);
 	building.polys.push_back(f);
 	Poly b(polyBack);
-	b.SetNormals(float3(0, 0, -1), float3(1, 0, 0), float3(0, 1, 0)); // Tangents same because tex coords same
+	b.SetNormals(float3(0, 0, -1), float3(1, 0, 0) * tangScale, float3(0, 1, 0)); // Tangents same because tex coords same
 	b.SetTexMapping(float3(0, 0, 1), float3(0, 1, 0), uvStart, uvEnd);
 	building.polys.push_back(b);
 
@@ -156,6 +158,7 @@ void MirrorSketch(Building& building, vector<int2>& outline)
 {
 	float2 uvStart(-building.bounds.width/2, -building.bounds.height/2);
 	float2 uvEnd(building.bounds.width/2, building.bounds.height/2);
+	float tangScale = float(building.bounds.height) / building.bounds.width; // Hack to fix distortion
 
 	// Magic... TODO: Proper comments
 	int2 previous = outline[0];
@@ -223,7 +226,7 @@ void MirrorSketch(Building& building, vector<int2>& outline)
 			float3 frontNormal = normal(float3(0.0f, current.x - previous.x, current.y - previous.y)); // at 90 deg to binormal
 			//float3 frontNormal = cross(frontTangent, frontBinormal);
 			Poly polyFront(front);
-			polyFront.SetNormals(frontNormal, frontTangent, frontBinormal);
+			polyFront.SetNormals(frontNormal, frontTangent * tangScale, frontBinormal);
 			polyFront.SetTexMapping(float3(1, 0, 0), float3(0, 1, 0), uvStart, uvEnd);
 			building.polys.push_back(polyFront);
 
@@ -234,7 +237,7 @@ void MirrorSketch(Building& building, vector<int2>& outline)
 			float3 sideNormal = normal(float3(current.y - previous.y, current.x - previous.x, 0.0f));
 			//float3 sideNormal = cross(sideTangent, sideBinormal);
 			Poly polySide(side);
-			polySide.SetNormals(sideNormal, sideTangent, sideBinormal);
+			polySide.SetNormals(sideNormal, sideTangent * tangScale, sideBinormal);
 			polySide.SetTexMapping(float3(0, 0, 1), float3(0, 1, 0), uvStart, uvEnd);
 			building.polys.push_back(polySide);
 		}

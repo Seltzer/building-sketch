@@ -50,8 +50,8 @@ void main()
 	normal = normalize(normal);
 	
 	float ambient = 0.25;
-	float diffuse = 0.5 * max(0.0, -dot(lightDir, normal));
-	float specular = 0.8 * pow(max(0.0, -dot(normal, halfVec)), 20);
+	float diffuse = 0.6 * max(0.0, -dot(lightDir, normal));
+	float specular = 0.2 * pow(max(0.0, -dot(normal, halfVec)), 20);
 	gl_FragColor = vec4(color.xyz * (ambient + diffuse) + specular, 1.0);
 	//gl_FragColor = texture2D(normalmap, pt_eye.xy);
 }

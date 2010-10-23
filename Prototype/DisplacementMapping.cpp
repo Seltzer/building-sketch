@@ -6,7 +6,7 @@ sf::Image displacementMap;
 std::vector<std::vector<PixelData>> displacementVector;
 
 sf::Color black = sf::Color(0, 0, 0, 255);
-sf::Color gray = sf::Color(128, 128, 128, 255);
+sf::Color gray = black; //sf::Color(128, 128, 128, 255); // Just for now... dols
 sf::Color white = sf::Color(255, 255, 255, 255);
 sf::Color red = sf::Color(255, 0, 0, 255);
 sf::Color blue = sf::Color(0, 0, 255, 255);
