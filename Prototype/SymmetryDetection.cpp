@@ -246,7 +246,7 @@ LineOfSymmetry CalculateSymmetry(bool pixels[805][605], bool pointNear[805][605]
 }
 
 
-void ApplyLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, 
+vector<Stroke> ApplyLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][605], vector<Stroke>& strokes, Stroke& buildingOutline, 
 						Stroke& mirroredStroke1, Stroke& mirroredStroke2, bool mirrorLeft)
 {
 	vector<Stroke> outputStrokes;
@@ -255,19 +255,19 @@ void ApplyLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][60
 	// Iterate over all strokes
 	for (vector<Stroke>::iterator it = strokes.begin(); it < strokes.end(); it++)
 	{
-		vector<Stroke> outputStrokes;
-		outputStrokes.push_back(Stroke());
+		vector<Stroke> generatedStrokes;
+		generatedStrokes.push_back(Stroke());
 		int currentStroke = 0;
 
+		stack<int2> pointsStack;
+		deque<int2> pointsQueue;
 
-		// Counterparts on non-mirror side which will be added to stroke as soon as we leave the mirror side
-		stack<int2> counterpartsToAdd;
-		// Points on mirror side which will be added as soon as we enter the mirror side
-		deque<int2> pointsToAdd;
 
 		// Are we on the LOS or to the left or right?
 		enum Orientation { LEFT, CENTRE, RIGHT };
 		Orientation or = LEFT;
+
+		bool greedyMode = true;
 
 
 		// Iterate over points of each stroke
@@ -286,42 +286,108 @@ void ApplyLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][60
 			{
 				if (pointToLosDistance > 0)
 				{
+					// Point is to the right of LOS
+
+					if ( (or == LEFT) || (or == CENTRE) )
+					{
+						// Transition from left/centre to right
+						
+						// Add points on stack to new stroke 
+						// Could be primary or counterparts, depending on whether we were in greedy mode - we don't care
+						generatedStrokes.push_back(Stroke());
+						++currentStroke;
+
+						while(!pointsStack.empty())
+						{
+							generatedStrokes[currentStroke].points.push_back(pointsStack.top());
+							pointsStack.pop();
+						}
+
+
+						if (!greedyMode)
+						{
+							// Add points in queue to new stroke - these are primaries
+							generatedStrokes.push_back(Stroke());
+							++currentStroke;
+
+							while(!pointsQueue.empty())
+							{
+								generatedStrokes[currentStroke].points.push_back(pointsQueue.front());
+								pointsQueue.pop_front();
+							}
+						}
+												
+						greedyMode = false;
+					}
+
 					or = RIGHT;
-					// Point is to the right of LOS, so ignore it
-					continue;
 				}
-				
-				if ( (or == LEFT) || (or == CENTRE) )
+				else if (pointToLosDistance == 0)
 				{
-					// We were already in the centre, so add p to current stroke
-					outputStrokes[currentStroke].points.push_back(p);
+					// Point is on LOS
+					or = CENTRE;
 
-					if (pointToLosDistance == 0)
-					{
-						or = CENTRE;
-						// Centre points don't have counterparts
-					}
+					if (greedyMode)
+						generatedStrokes[currentStroke].points.push_back(p);
 					else
-					{
-						or = LEFT;
-
-						// Calculate position of counterpart point, and add point to stack			
-						float2 counterpartPosition = p + 2 * pointToLosDistance * los.ccwPerp; 
-						int2 counterpartPosAsInts(counterpartPosition.x, counterpartPosition.y);
-
-						//counterpartsInStroke.
-					}
+						pointsQueue.push_back(p);
 				}
 				else
 				{
-					// We are transitioning from right to left, so create a new stroke
+					// Point is to left of LOS
+					or = LEFT;
+					
+					// Calculate position of counterpart point
+					float2 counterpartPosition = p + 2 * pointToLosDistance * los.ccwPerp; 
+					int2 counterpartPosAsInts(counterpartPosition.x, counterpartPosition.y);
+
+
+					if (greedyMode)
+					{
+						generatedStrokes[currentStroke].points.push_back(p);
+						pointsStack.push(counterpartPosAsInts);
+					}
+					else
+					{
+						pointsStack.push(counterpartPosAsInts);
+						pointsQueue.push_back(p);
+					}
 				}
 			}
 			else
 			{
-
-
+				assert(false);
 			}
+		}
+
+
+		// We've run out of points - flush the queue + stack
+		generatedStrokes.push_back(Stroke());
+		++currentStroke;
+
+		while(!pointsStack.empty())
+		{
+			generatedStrokes[currentStroke].points.push_back(pointsStack.top());
+			pointsStack.pop();
+		}
+		
+		if (!greedyMode)
+		{
+			// Add points in queue to new stroke - these are primaries
+			generatedStrokes.push_back(Stroke());
+			++currentStroke;
+
+			while(!pointsQueue.empty())
+			{
+				generatedStrokes[currentStroke].points.push_back(pointsQueue.front());
+				pointsQueue.pop_front();
+			}
+		}
+
+		for (vector<Stroke>::iterator it = generatedStrokes.begin(); it < generatedStrokes.end(); it++)
+		{
+			outputStrokes.push_back(*it);
+
 		}
 	}
 
@@ -329,4 +395,5 @@ void ApplyLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][60
 	// Combine strokes if possible
 
 	// return new strokes
+	return outputStrokes;
 }

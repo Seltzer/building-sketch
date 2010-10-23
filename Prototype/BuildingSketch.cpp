@@ -177,9 +177,17 @@ void BuildingSketch::RenderStrokes()
 
 	// Draw mirroredStroke1 in blue and mirroredStroke2 in some other colour - these exist for symmetry testing purposes
 	glColor3f(0,0,1);
-	DrawStroke(mirroredStroke1);
+	//DrawStroke(mirroredStroke1);
 	glColor3f(0,0.5,0.6);
-	DrawStroke(mirroredStroke2);
+	//DrawStroke(mirroredStroke2);
+
+	// Draw generated strokes in 
+	glColor3f(0,0,1);
+	for (vector<Stroke>::iterator it = generatedStrokes.begin(); it < generatedStrokes.end(); it++)
+	{
+		DrawStroke(*it);
+	}
+
 
 	// Draw line of symmetry in green
 	if (los.pointOnLine.x == 0 && los.pointOnLine.y == 0)
@@ -428,6 +436,11 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 			los = CalculateSymmetry(pixels, pointNear, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
 			if (los.score > 0)
 				losApplicationPending = true;
+
+			generatedStrokes = ApplyLOS(los, pixels, pointNear, strokes, buildingOutline, mirroredStroke1, mirroredStroke2, true);
+
+
+			losApplicationPending = false;
 		}
 		// Increase the rations count for the rotation algorith.
 		else if (Event.Key.Code == sf::Key::Comma)

@@ -54,6 +54,7 @@ private:		// Private fields
 	// Sketch input
 	Stroke currentStroke, buildingOutline;
 	std::vector<Stroke> strokes, reducedStrokes, polyLines, featureOutlines;
+	std::vector<Stroke> generatedStrokes;
 	float maxArea;
 
 	// Another data structure for tracking strokes which are drawn (pre-reduction)
