@@ -166,14 +166,8 @@ void BuildingSketch::ResetStrokes()
 
 	maxArea = 0;
 
-	for (int x = 0; x <= 800; x++)
-	{
-		for (int y = 0; y <= 600; y++)
-		{
-			pixels[x][y] = false;
-			pointNear[x][y] = false;
-		}
-	}
+	// Clear pixels and pixelsNear
+	StrokesToMatrices<805,605>(pixels, pixelsNear, 0, vector<Stroke>());
 }
 
 void BuildingSketch::RenderStrokes()
@@ -425,6 +419,25 @@ void BuildingSketch::CleanUpSymmetry()
 	}
 }
 
+void BuildingSketch::GenerateSketch(vector<Stroke>& strokes)
+{
+	ResetStrokes();
+	StrokesToMatrices<805, 605>(pixels, pixelsNear, 1, strokes);
+
+	for (vector<Stroke>::iterator it = strokes.begin(); it < strokes.end(); it++)
+	{
+		// We don't care about dots
+		if ((*it).points.size() >=2) 
+			ProcessStroke(*it); // Process the stroke
+	}
+	
+	UpdateBuilding();
+	CleanUpSymmetry();
+}
+
+
+
+
 
 //////////////////////////////////////////////////// Events
 void BuildingSketch::ProcessEvent(sf::Event& Event)
@@ -473,8 +486,18 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 		{
 			CleanUpSymmetry();
 
-			symm = new SymmetryApplication(strokes, buildingOutline);
-			symm->CalculateSymmetry(pixels, pointNear);
+			symm = new SymmetryApplication(buildingOutline);
+			
+			if (NumberOfPoints(strokes) < 50)
+			{
+				symm->InterpolateSketch(strokes);
+				symm->CalculateSymmetry();
+			}
+			else
+			{
+				symm->CalculateSymmetry(pixels, pixelsNear, strokes);
+			}
+						
 						
 			if (symm->LOSIsValid())
 			{
@@ -486,38 +509,16 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 		{
 			if (losApplicationPending)
 			{
-				vector<Stroke> generated = symm->ApplyLOS(pixels, pointNear, true);
-				ResetStrokes();
-
-				for (vector<Stroke>::iterator it = generated.begin(); it < generated.end(); it++)
-				{
-					// We don't care about dots
-					if ((*it).points.size() >=2) 
-						ProcessStroke(*it); // Process the stroke
-				}
-				
-				UpdateBuilding();
-				currentStroke = Stroke(); // Reset stroke for next drawing
-				CleanUpSymmetry();
+				vector<Stroke> generated = symm->ApplyLOS(pixels, pixelsNear, strokes, true);
+				GenerateSketch(generated);
 			}
 		}
 		else if (Event.Key.Code == sf::Key::R)
 		{
 			if (losApplicationPending)
 			{
-				vector<Stroke> generated = symm->ApplyLOS(pixels, pointNear, false);
-				ResetStrokes();
-
-				for (vector<Stroke>::iterator it = generated.begin(); it < generated.end(); it++)
-				{
-					// We don't care about dots
-					if ((*it).points.size() >=2) 
-						ProcessStroke(*it); // Process the stroke
-				}
-				
-				UpdateBuilding();
-				currentStroke = Stroke(); // Reset stroke for next drawing
-				CleanUpSymmetry();
+				vector<Stroke> generated = symm->ApplyLOS(pixels, pixelsNear, strokes, true);
+				GenerateSketch(generated);
 			}
 		}
 		// Increase the rations count for the rotation algorith.
@@ -633,7 +634,7 @@ void BuildingSketch::MouseMoved(int2 pos)
 			{
 				for (int y = -1; y <= 1; y++)
 				{
-					pointNear[pos.x + x][pos.y + y] = true;
+					pixelsNear[pos.x + x][pos.y + y] = true;
 				}
 			}
 

@@ -12,6 +12,8 @@
 
 //#define DEBUGGING
 
+#define INVALID -1
+
 
 struct Bounds
 {

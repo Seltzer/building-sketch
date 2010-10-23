@@ -213,6 +213,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\SketchPreprocessing.inl"
+				>
+			</File>
+			<File
 				RelativePath=".\SymmetryDetection.cpp"
 				>
 			</File>

@@ -55,6 +55,9 @@ private:		// Private methods
 
 	void CleanUpSymmetry();
 
+	// Generates a new sketch based on the strokes returned from symmetry processing
+	void GenerateSketch(std::vector<Stroke>&);
+
 private:		// Private fields
 	// Sketch input
 	Stroke currentStroke, buildingOutline;
@@ -64,13 +67,12 @@ private:		// Private fields
 	// Another data structure for tracking strokes which are drawn (pre-reduction)
 	// Used for symmetry calculation
 	bool pixels[805][605];
-	bool pointNear[805][605];
+	bool pixelsNear[805][605];
 
 	// Symmetry stuff
 	LineOfSymmetry* los;						// last line of symmetry which was calculated
 	SymmetryApplication* symm;
 	bool losApplicationPending;					// True if a 'good' line of symmetry has been calculated but not acted upon
-	
 	
 		
 	// Building algorithm selection, algorithm params and Building output

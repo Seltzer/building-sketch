@@ -58,3 +58,13 @@ Stroke Reduce(const Stroke& stroke, float threshold)
 	return final;
 }
 
+unsigned NumberOfPoints(std::vector<Stroke>& sketch)
+{
+	unsigned num = 0;
+
+	for (vector<Stroke>::iterator it = sketch.begin(); it < sketch.end(); it++)
+		num += (*it).points.size();
+
+	return num;
+
+}

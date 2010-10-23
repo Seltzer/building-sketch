@@ -10,7 +10,6 @@
 
 
 // Utility functions
-bool PointExistsNear(bool pixels[805][605], bool pointNear[805][605], const int2 position);
 bool EdgeExistsBetween(bool pixels[805][605], bool pointNear[805][605], const int2, const int2);
 
 
@@ -24,11 +23,9 @@ struct LineOfSymmetry
 	float2 direction;
 	// Unit vectors for perpendicular vectors (direction rotated CCW and CW by 0.5pi)
 	float2 ccwPerp, cwPerp;
-
 	float distanceFromOrigin;
 
-	unsigned matches;	
-	int score;
+	int matches, score, numberOfPointsBasedOn;	
 
 
 	LineOfSymmetry();
@@ -38,6 +35,8 @@ struct LineOfSymmetry
 
 	// Project a vector along the line given by ccwPerp/cwPerp, and return the magnitude of the resulting vector
 	float ProjectedVectorMagnitude(float2 vec);
+
+	void UpdateStats(int matches, int score, int numberOfPointsBasedOn);
 
 	// For debugging
 	std::string ToString();
@@ -50,31 +49,50 @@ class SymmetryApplication
 {
 
 public:
-	SymmetryApplication(std::vector<Stroke>& strokes, Stroke& buildingOutline);
+	SymmetryApplication(Stroke& buildingOutline);
 
-	// This currently calculates the best fitting line of symmetry and does random stuff (TODO either mirror one half of the sketch or average both halves)
-	void CalculateSymmetry(bool pixels[805][605], bool pointNear[805][605]);
+	// Interpolation makes symmetry detection slower but more accurate... should probably only be called
+	// if there aren't many points in the sketch input
+	void InterpolateSketch(std::vector<Stroke>&);
 
-	// Apply last calculated LOS to sketch, mirror one half and discard the other
-	std::vector<Stroke> ApplyLOS(bool pixels[805][605], bool pointNear[805][605], bool mirrorLeft);
+
+	// This calculates the best fitting line of symmetry
+	void CalculateSymmetry(bool pixels[805][605], bool pointNear[805][605], std::vector<Stroke>&);
+
+	// Overload which uses interpolated pixels/strokes as counterparts (but not primaries)
+	// Pre-Condition: InterpolateSketch has been called
+	void CalculateSymmetry(std::vector<Stroke>&);
+
+	// Overload which uses interpolated pixels/strokes as both primaries and counterparts
+	// Pre-Condition: InterpolateSketch has been called
+	void CalculateSymmetry();
+
+
+	// Apply last calculated LOS to sketch by mirroring one half and discarding the other
+	std::vector<Stroke> ApplyLOS(bool pixels[805][605], bool pointNear[805][605], std::vector<Stroke>&, bool mirrorLeft);
 
 	LineOfSymmetry GetLOS();
 	bool LOSIsValid();
 	
 private:
-	// Evaluate los
-	void EvaluateLOS(bool pixels[805][605], bool pointNear[805][605]);
+	int EvaluateLOS(LineOfSymmetry& los, bool pixels[805][605], bool pointNear[805][605], std::vector<Stroke>&);
 
 	Stroke CreateStroke(std::deque<int2>&);
 	Stroke CreateStroke(std::stack<int2>&);
 
-	bool CanMerge(Stroke& first, Stroke& second);
+	void CombineStrokes(std::vector<Stroke>&);
+	bool CanMerge(Stroke& first, Stroke& second, unsigned threshold = 50);
+	
 
+	// Interpolated sketch
+	bool usingInterpolation;
+	bool interpolatedPixels[805][605];
+	bool interpolatedPixelsNear[805][605];
+	std::vector<Stroke> interpolatedStrokes;
+		
 
-	std::vector<Stroke>& strokes;
-	Stroke& buildingOutline;
-
-	LineOfSymmetry los;
+	Stroke buildingOutline;
+	LineOfSymmetry bestLOS;
 };
 
 
