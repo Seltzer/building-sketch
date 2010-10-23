@@ -19,13 +19,19 @@ using namespace std;
 
 
 BuildingSketch::BuildingSketch() 
-	: maxArea(0), buildingAlgorithm(EXTRUDE), losApplicationPending(false), rotationCount(8), mirrorSketch(false), filled(true), yaw(45), pitch(25), zoom(0), 
+	: maxArea(0), los(NULL), symm(NULL), buildingAlgorithm(EXTRUDE), losApplicationPending(false), rotationCount(8), mirrorSketch(false), filled(true), yaw(45), pitch(25), zoom(0), 
 			windowSize(800, 600), mouseAction(NONE), showAxis(true), defaultAppString("Building Sketch")
 {	
 	verticalDivision = windowSize.x/2;
 
 	ResetStrokes();
 }
+
+BuildingSketch::~BuildingSketch()
+{
+	CleanUpSymmetry();
+}
+
 
 void BuildingSketch::UpdateBuilding()
 {
@@ -131,12 +137,13 @@ void BuildingSketch::ResetStrokes()
 	reducedStrokes.clear();		
 	polyLines.clear();
 	featureOutlines.clear();
-	mirroredStroke1.points.clear();
-	mirroredStroke2.points.clear();
 
 	buildingOutline = Stroke();	
 	currentStroke = Stroke();
-	los = LineOfSymmetry();
+	
+	CleanUpSymmetry();
+	
+
 	maxArea = 0;
 
 	for (int x = 0; x <= 800; x++)
@@ -175,33 +182,17 @@ void BuildingSketch::RenderStrokes()
 		DrawStroke(*s);
 	}
 
-	// Draw mirroredStroke1 in blue and mirroredStroke2 in some other colour - these exist for symmetry testing purposes
-	glColor3f(0,0,1);
-	//DrawStroke(mirroredStroke1);
-	glColor3f(0,0.5,0.6);
-	//DrawStroke(mirroredStroke2);
-
-	// Draw generated strokes in 
-	glColor3f(0,0,1);
-	for (vector<Stroke>::iterator it = generatedStrokes.begin(); it < generatedStrokes.end(); it++)
-	{
-		DrawStroke(*it);
-	}
-
-
 	// Draw line of symmetry in green
-	if (los.pointOnLine.x == 0 && los.pointOnLine.y == 0)
-		return; 
+	if (los != NULL)
+	{
+		int2 losEnd = los->pointOnLine + 500 * los->direction;
 
-	int2 losEnd = los.pointOnLine + 500 * los.direction;
-
-	glColor3f(0, 1, 0);
-
-	glBegin(GL_LINES);
-		glVertex2f(los.pointOnLine.x, los.pointOnLine.y);
-		glVertex2f(losEnd.x, losEnd.y);
-	glEnd();
-
+		glColor3f(0, 1, 0);
+		glBegin(GL_LINES);
+			glVertex2f(los->pointOnLine.x, los->pointOnLine.y);
+			glVertex2f(losEnd.x, losEnd.y);
+		glEnd();
+	}
 }
 
 void BuildingSketch::DrawStroke(const Stroke& stroke)
@@ -392,6 +383,23 @@ void BuildingSketch::UpdateWindowTitle()
 	ChangeWindowTitle(newTitle);
 }
 
+void BuildingSketch::CleanUpSymmetry()
+{
+	losApplicationPending = false;
+
+	if (symm != NULL)
+	{
+		delete symm;
+		symm = NULL;
+	}
+
+	if (los != NULL)
+	{
+		delete los;
+		los = NULL;
+	}
+}
+
 
 //////////////////////////////////////////////////// Events
 void BuildingSketch::ProcessEvent(sf::Event& Event)
@@ -413,7 +421,12 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 	if (Event.Type == sf::Event::KeyPressed)
 	{
 		if (Event.Key.Code == sf::Key::Escape)
-			win->Close();
+		{
+			if (losApplicationPending)
+				CleanUpSymmetry();
+			else
+				win->Close();
+		}
 		else if (Event.Key.Code == sf::Key::Left || Event.Key.Code == sf::Key::Right)
 			yaw = 0;
 		else if (Event.Key.Code == sf::Key::Up || Event.Key.Code == sf::Key::Down)
@@ -430,17 +443,57 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 			mirrorSketch = !mirrorSketch;
 			UpdateBuilding();
 		}
-		// Do symmetry related stuff
+		// Calculate a line of symmetry
 		else if (Event.Key.Code == sf::Key::S)
 		{
-			los = CalculateSymmetry(pixels, pointNear, strokes, buildingOutline, mirroredStroke1, mirroredStroke2);
-			if (los.score > 0)
+			CleanUpSymmetry();
+
+			symm = new SymmetryApplication(strokes, buildingOutline);
+			symm->CalculateSymmetry(pixels, pointNear);
+						
+			if (symm->LOSIsValid())
+			{
+				los = new LineOfSymmetry(symm->GetLOS());
 				losApplicationPending = true;
+			}
+		}
+		else if (Event.Key.Code == sf::Key::L)
+		{
+			if (losApplicationPending)
+			{
+				vector<Stroke> generated = symm->ApplyLOS(pixels, pointNear, true);
+				ResetStrokes();
 
-			generatedStrokes = ApplyLOS(los, pixels, pointNear, strokes, buildingOutline, mirroredStroke1, mirroredStroke2, true);
+				for (vector<Stroke>::iterator it = generated.begin(); it < generated.end(); it++)
+				{
+					// We don't care about dots
+					if ((*it).points.size() >=2) 
+						ProcessStroke(*it); // Process the stroke
+				}
+				
+				UpdateBuilding();
+				currentStroke = Stroke(); // Reset stroke for next drawing
+				CleanUpSymmetry();
+			}
+		}
+		else if (Event.Key.Code == sf::Key::R)
+		{
+			if (losApplicationPending)
+			{
+				vector<Stroke> generated = symm->ApplyLOS(pixels, pointNear, false);
+				ResetStrokes();
 
-
-			losApplicationPending = false;
+				for (vector<Stroke>::iterator it = generated.begin(); it < generated.end(); it++)
+				{
+					// We don't care about dots
+					if ((*it).points.size() >=2) 
+						ProcessStroke(*it); // Process the stroke
+				}
+				
+				UpdateBuilding();
+				currentStroke = Stroke(); // Reset stroke for next drawing
+				CleanUpSymmetry();
+			}
 		}
 		// Increase the rations count for the rotation algorith.
 		else if (Event.Key.Code == sf::Key::Comma)

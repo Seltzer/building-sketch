@@ -28,39 +28,11 @@ struct Stroke
 	void CalculateBounds();
 };
 
-struct LineOfSymmetry
-{
-	int2 pointOnLine;
-	// Unit-vector for direction
-	float2 direction;
-
-	// Unit vectors for perpendicular vectors (direction rotated CCW and CW by 0.5pi)
-	float2 ccwPerp, cwPerp;
-
-	float distanceFromOrigin;
-
-
-
-	LineOfSymmetry();
-	
-	// Normalises direction and calculates ccwPerp, cwPerp and distanceFromOrigin
-	void CalculateVectors();
-
-	// Project a vector along the line given by ccwPerp/cwPerp, and return the magnitude of the resulting vector
-	float ProjectedVectorMagnitude(float2 vec);
-
-	// For debugging
-	std::string ToString();
-
-	int score;
-};
-
 struct Building
 {
 	Bounds bounds;
 	std::vector<Poly> polys;
 };
-
 
 // Utility functions
 float randFloat();

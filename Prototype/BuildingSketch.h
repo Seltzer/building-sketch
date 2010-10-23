@@ -9,13 +9,16 @@
 #include "Common.h"
 
 class Shader;
+class LineOfSymmetry;
+class SymmetryApplication;
+
 
 class BuildingSketch
 {
 
 public:	
-	
 	BuildingSketch();
+	~BuildingSketch();
 	void RenderLoop();		
 	
 	// Sketch processing/rendering methods
@@ -50,11 +53,12 @@ private:		// Private methods
 	// Update title according to building algorithm and parameters
 	void UpdateWindowTitle();
 
+	void CleanUpSymmetry();
+
 private:		// Private fields
 	// Sketch input
 	Stroke currentStroke, buildingOutline;
 	std::vector<Stroke> strokes, reducedStrokes, polyLines, featureOutlines;
-	std::vector<Stroke> generatedStrokes;
 	float maxArea;
 
 	// Another data structure for tracking strokes which are drawn (pre-reduction)
@@ -63,9 +67,11 @@ private:		// Private fields
 	bool pointNear[805][605];
 
 	// Symmetry stuff
-	LineOfSymmetry los;							// last line of symmetry which was calculated
+	LineOfSymmetry* los;						// last line of symmetry which was calculated
+	SymmetryApplication* symm;
 	bool losApplicationPending;					// True if a 'good' line of symmetry has been calculated but not acted upon
-	Stroke mirroredStroke1, mirroredStroke2;	// these two are for testing symmetry
+	
+	
 		
 	// Building algorithm selection, algorithm params and Building output
 	enum BUILDING_ALGORITHM { EXTRUDE, ROTATE, MIRROR};
