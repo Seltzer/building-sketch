@@ -56,6 +56,8 @@ void BuildingSketch::UpdateBuilding()
 	building.bounds.depth = (buildingAlgorithm == EXTRUDE) ? 0 : buildingOutline.bounds.width;
 
 	vector<int2> outline = buildingOutline.points;
+	if (outline.size() == 0)
+		return;
 	// Move the building's center to the origin.
 	int x_dif = building.bounds.x + (building.bounds.width/2);
 	int y_dif = building.bounds.y + (building.bounds.height/2);
@@ -80,8 +82,6 @@ void BuildingSketch::UpdateBuilding()
 		stroke.points.push_back(stroke.points[0]);
 		processedFeatureOutlines.push_back(stroke);
 	}
-	if (outline.size() == 0)
-		return;
 
 	// Move the feature outlines to a 0,0 co-ordinate & generate a displacement map
 	std::vector<Stroke> displacementMapStrokes;
@@ -162,8 +162,6 @@ void BuildingSketch::ResetStrokes()
 	currentStroke = Stroke();
 	
 	CleanUpSymmetry();
-	
-
 	maxArea = 0;
 
 	// Clear pixels and pixelsNear
