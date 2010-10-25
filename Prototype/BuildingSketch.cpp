@@ -548,16 +548,8 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 
 			symm = new SymmetryApplication(buildingOutline);
 			
-			if (NumberOfPoints(strokes) < 50)
-			{
-				symm->InterpolateSketch(strokes);
-				symm->CalculateSymmetry();
-			}
-			else
-			{
-				symm->CalculateSymmetry(pixels, pixelsNear, strokes);
-			}
-						
+			symm->InterpolateSketch(strokes);
+			symm->CalculateSymmetry();
 						
 			if (symm->LOSIsValid())
 			{
@@ -577,7 +569,7 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 		{
 			if (losApplicationPending)
 			{
-				vector<Stroke> generated = symm->ApplyLOS(pixels, pixelsNear, strokes, true);
+				vector<Stroke> generated = symm->ApplyLOS(pixels, pixelsNear, strokes, false);
 				GenerateSketch(generated);
 			}
 		}
