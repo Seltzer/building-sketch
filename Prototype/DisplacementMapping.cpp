@@ -324,16 +324,14 @@ bool isSpike(int x, int y, Stroke stroke, int pointID1)
 	int newLeftPos = pointPos;
 	while (leftY == y)
 	{
-		int prevPointPos = (newLeftPos == 0) ? stroke.points.size()-2 : newLeftPos-1;
-		leftY = stroke.points[prevPointPos].y;
-		newLeftPos--;
+		newLeftPos = (newLeftPos == 0) ? stroke.points.size()-2 : newLeftPos-1;
+		leftY = stroke.points[newLeftPos].y;
 	}
 	int newRightPos = pointPos;
 	while (rightY == y)
 	{
-		int nextPointPos = (newRightPos == stroke.points.size()-1) ? 1 : newRightPos+1;
-		rightY = stroke.points[nextPointPos].y;
-		newRightPos++;
+		newRightPos = (newRightPos == stroke.points.size()-1) ? 1 : newRightPos+1;
+		rightY = stroke.points[newRightPos].y;
 	}
 	
 	if (((leftY >= y) && (rightY <= y))

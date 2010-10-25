@@ -22,7 +22,7 @@ void main()
 	//gl_FragColor = texture2D(normalmap, texCoord);
 	//return;
 	
-	float depth = 0.05; // Adjust scale of displacement
+	float depth = 0.02; // Adjust scale of displacement
 	
 	// ray intersect in view direction
 	float a = -depth / vertex_pos.z;

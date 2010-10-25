@@ -15,7 +15,7 @@ void main(void)
    // location of the vertex in eye space
    vec3 eyeSpaceVert = (gl_ModelViewMatrix * gl_Vertex).xyz;
    
-   vec3 eyeSpaceLightDir = (gl_ModelViewMatrix * vec4(-0.707, -0.707, 0.0, 0.0)).xyz;
+   vec3 eyeSpaceLightDir = (gl_ModelViewMatrix * vec4(-0.707, -0.707, -0.707, 0.0)).xyz;
    
    vec3 eyeSpaceHalfVec = normalize(eyeSpaceLightDir + vec3(0, 0, -1)); // Only comes out 0 if looking at backfaces, so shouldn't matter I hope
 
