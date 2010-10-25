@@ -9,7 +9,7 @@
 #include "Common.h"
 
 class Shader;
-class LineOfSymmetry;
+struct LineOfSymmetry;
 class SymmetryApplication;
 
 
@@ -61,7 +61,7 @@ private:		// Private methods
 private:		// Private fields
 	// Sketch input
 	Stroke currentStroke, buildingOutline;
-	std::vector<Stroke> strokes, reducedStrokes, polyLines, featureOutlines;
+	std::vector<Stroke> strokes, reducedStrokes, polyLines, featureOutlines, curves;
 	float maxArea;
 
 	// Another data structure for tracking strokes which are drawn (pre-reduction)
@@ -82,7 +82,7 @@ private:		// Private fields
 	bool mirrorSketch;
 	Building building;
 
-	BUILDING_ALGORITHM SelectAlgorithm(Bounds bounds, std::vector<int2> outline, std::vector<Stroke> processedFeatureOutlines);
+	BUILDING_ALGORITHM SelectAlgorithm();
 
 	// Windowing / OpenGL stuff
 	sf::RenderWindow* win;

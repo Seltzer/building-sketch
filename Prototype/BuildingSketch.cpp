@@ -31,17 +31,61 @@ BuildingSketch::~BuildingSketch()
 {
 	CleanUpSymmetry();
 }
+
 bool IsCurved(const Stroke stroke)
 {
-	return false;
+	const std::vector<int2>& points = stroke.points;
+	std::vector<float> angles;
+	angles.reserve(points.size());
+	float avgAngle = 0.0f;
+	float totalAngle = 0.0f;
+	float maxAngle = 0.0f;
+
+	if (points.size() < 3)
+		return false;
+
+	for (unsigned i = 1; i < points.size()-1; i++)
+	{
+		int2 prev = points[i-1];
+		int2 cur = points[i];
+		int2 next = points[i+1];
+		float2 seg1 = cur - prev;
+		float2 seg2 = next - cur;
+		float dist = (seg1.length() + seg2.length()) / 2.0f;
+		float angle = atan2f(seg2.y, seg2.x) - atan2f(seg1.y, seg1.x);
+		angles.push_back(angle / dist);
+		avgAngle += angle / dist;
+		totalAngle += angle;
+		maxAngle = std::max(maxAngle, abs(angle));
+	}
+
+	float variance = 0.0f;
+	for (unsigned i = 0; i < angles.size(); i++)
+	{
+		float diff = angles[i] - avgAngle;
+		variance += diff * diff;
+	}
+	variance /= angles.size();
+
+	float stddev = sqrt(variance);
+
+	//std::cout << "angle: " << totalAngle << " avgAngle: " << avgAngle << " stddev: " << stddev << " maxangle: " << maxAngle <<  std::endl;
+
+	if (maxAngle > 3.14169f/3)
+		return false;
+
+	// If angle is more than a few degrees, fairly consistently one way (some num standard deviations from 0)
+	// and angle is less than 180 (not a proper feature or outline) we have our curve.
+	return (abs(totalAngle) > 20*3.14159/180 && abs(totalAngle) < 3.14159) && abs(avgAngle) > 1.3 * stddev;
 }
 
-BuildingSketch::BUILDING_ALGORITHM BuildingSketch::SelectAlgorithm(Bounds bounds, vector<int2> outline, vector<Stroke> processedFeatureOutlines)
+BuildingSketch::BUILDING_ALGORITHM BuildingSketch::SelectAlgorithm()
 {
 	// Determine if round. While ideally we would determine if parts of the building are round, for now we will just do the whole thing
-	
+	if (curves.size() > 0) // If there is a curve
+		return ROTATE; // Assume whole building is round
 
-	if (bounds.height > 1.5f * bounds.width)
+	if (buildingOutline.bounds.height > 1.5f * buildingOutline.bounds.width)
 		return MIRROR;
 	else
 		return EXTRUDE;
@@ -51,9 +95,16 @@ void BuildingSketch::UpdateBuilding()
 {
 	building.polys.clear();
 
+	vector<Stroke> features = featureOutlines;
+
+	BUILDING_ALGORITHM algo = buildingAlgorithm;
+
+	if (buildingAlgorithm == DETECT)
+		algo = SelectAlgorithm();
+
 	// Building bounds are the same as sketch bounds, possibly apart from the depth
 	building.bounds = buildingOutline.bounds;
-	building.bounds.depth = (buildingAlgorithm == EXTRUDE) ? 0 : buildingOutline.bounds.width;
+	building.bounds.depth = (algo == EXTRUDE) ? 0 : buildingOutline.bounds.width;
 
 	vector<int2> outline = buildingOutline.points;
 	if (outline.size() == 0)
@@ -69,7 +120,7 @@ void BuildingSketch::UpdateBuilding()
 
 	// Move the feature outlines accordingly
 	vector<Stroke> processedFeatureOutlines;
-	for (vector<Stroke>::iterator s = featureOutlines.begin(); s != featureOutlines.end(); s++)
+	for (vector<Stroke>::iterator s = features.begin(); s != features.end(); s++)
 	{
 		Stroke stroke = (*s);
 		for (unsigned i = 0; i < stroke.points.size(); i++)
@@ -97,14 +148,10 @@ void BuildingSketch::UpdateBuilding()
 		stroke.bounds.y += building.bounds.height/2;
 		displacementMapStrokes.push_back(stroke);
 	}
+
 	// Generate the displacement map
 	generateDisplacementMap(building.bounds, displacementMapStrokes);
 	normalMap = heightToNormal(displacementMap);
-
-	BUILDING_ALGORITHM algo = buildingAlgorithm;
-
-	if (buildingAlgorithm == DETECT)
-		algo = SelectAlgorithm(building.bounds, outline, processedFeatureOutlines);
 
 	switch (algo)
 	{
@@ -129,10 +176,17 @@ void BuildingSketch::ProcessStroke(const Stroke& stroke)
 {
 	strokes.push_back(currentStroke); // Record unprocessed stroke
 	Stroke reduced = Reduce(stroke, 30.0f);
+
+	//std::cout << IsCurved(reduced) << std::endl;
 		
 	// Calculate the bounds of each stroke. The modified and bounded strokes
 	// will be stored in polyLines and used to generate the 3D building model.
 	reduced.CalculateBounds();
+
+	if (IsCurved(reduced)) {
+		curves.push_back(reduced);
+		return; // Do not consider as anything else
+	}
 
 	// The stroke that encompasses the largest area is the outline
 	// All other strokes should be treated as features.
@@ -157,6 +211,7 @@ void BuildingSketch::ResetStrokes()
 	reducedStrokes.clear();		
 	polyLines.clear();
 	featureOutlines.clear();
+	curves.clear();
 
 	buildingOutline = Stroke();	
 	currentStroke = Stroke();
@@ -190,6 +245,13 @@ void BuildingSketch::RenderStrokes()
 	// Draw processed reduced strokes
 	glColor3f(1, 0, 0);
 	for (vector<Stroke>::iterator s = reducedStrokes.begin(); s != reducedStrokes.end(); s++)
+	{
+		DrawStroke(*s);
+	}
+
+	// Draw curves
+	glColor3f(1, 1, 0);
+	for (vector<Stroke>::iterator s = curves.begin(); s != curves.end(); s++)
 	{
 		DrawStroke(*s);
 	}
