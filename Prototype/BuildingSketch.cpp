@@ -85,7 +85,9 @@ BuildingSketch::BUILDING_ALGORITHM BuildingSketch::SelectAlgorithm()
 	if (curves.size() > 0) // If there is a curve
 		return ROTATE; // Assume whole building is round
 
-	if (buildingOutline.bounds.height > 1.5f * buildingOutline.bounds.width)
+	if (buildingOutline.bounds.height > 1.5f * buildingOutline.bounds.width
+		|| featureOutlines.size() > 6
+		|| buildingOutline.points.size() > 10)
 		return MIRROR;
 	else
 		return EXTRUDE;

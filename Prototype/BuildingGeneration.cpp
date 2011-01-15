@@ -102,6 +102,8 @@ void RotateSketch(Building& building, std::vector<int2>& outline, int rotationCo
 	std::vector<float3> polySide;
 	polySide.reserve(4);
 
+	float tangScale = float(building.bounds.height) / building.bounds.width; // Hack to fix distortion
+
 	// Convert old 2D outline to a 3D outline.			
 	std::vector<float3> oldOutline;
 	oldOutline.reserve(outline.size());
@@ -119,6 +121,9 @@ void RotateSketch(Building& building, std::vector<int2>& outline, int rotationCo
 			oldOutline[oldOutline.size()-1-i].y = oldOutline[i].y;
 		}
 	}
+
+	float2 uvStart(-building.bounds.width/2.0f, -building.bounds.height/2.0f);
+	float2 uvEnd(building.bounds.width/2.0f, building.bounds.height/2.0f);
 
 	for (int j = 0; j < (rotationCount+1)*2; j++)
 	{	
@@ -140,11 +145,23 @@ void RotateSketch(Building& building, std::vector<int2>& outline, int rotationCo
 			float3 currentPoint_newOutline = newOutline[i];
 			float3 currentPoint_oldOutline = oldOutline[i];
 			polySide.clear();
-			polySide.push_back(float3(currentPoint_newOutline.x, -currentPoint_newOutline.y, currentPoint_newOutline.z));
-			polySide.push_back(float3(currentPoint_oldOutline.x, -currentPoint_oldOutline.y, currentPoint_oldOutline.z));					
-			polySide.push_back(float3(prevPoint_oldOutline.x, -prevPoint_oldOutline.y, prevPoint_oldOutline.z));
-			polySide.push_back(float3(prevPoint_newOutline.x, -prevPoint_newOutline.y, prevPoint_newOutline.z));
-			building.polys.push_back(polySide);
+			float3 p1(currentPoint_newOutline.x, -currentPoint_newOutline.y, currentPoint_newOutline.z);
+			float3 p2(currentPoint_oldOutline.x, -currentPoint_oldOutline.y, currentPoint_oldOutline.z);					
+			float3 p3(prevPoint_oldOutline.x, -prevPoint_oldOutline.y, prevPoint_oldOutline.z);
+			float3 p4(prevPoint_newOutline.x, -prevPoint_newOutline.y, prevPoint_newOutline.z);
+			polySide.push_back(p1);
+			polySide.push_back(p2);					
+			polySide.push_back(p3);
+			polySide.push_back(p4);
+			Poly p(polySide);
+			float3 tangent = normal(p2 - p1);
+			if (p2.x > p1.x)
+				tangent - -tangent;
+			float3 bitangent = -normal(p1 - p4);
+			float3 norm = cross(tangent, bitangent);
+			p.SetNormals(norm, tangent * tangScale, bitangent);
+			p.SetTexMapping(float3(1, 0, 0), float3(0, 1, 0), uvStart, uvEnd);
+			building.polys.push_back(p);
 
 			prevPoint_oldOutline = currentPoint_oldOutline;
 			prevPoint_newOutline = currentPoint_newOutline;
