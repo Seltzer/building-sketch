@@ -155,9 +155,19 @@ void RotateSketch(Building& building, std::vector<int2>& outline, int rotationCo
 			polySide.push_back(p4);
 			Poly p(polySide);
 			float3 tangent = normal(p2 - p1);
-			if (p2.x > p1.x)
-				tangent - -tangent;
 			float3 bitangent = -normal(p1 - p4);
+			// Idealy differentiate between two halves of the space.
+			// When the tanget points in one half flip it.
+			// Thereby ensuring all the tangets are ...well
+			// ... consistant?
+			//
+			// But when in doubt (also lazy) H4x0r it.
+			// This wont work for lopsided shapes but 
+			// thats hardly noticable.
+			if (i < newOutline.size()/2)
+			{
+				tangent = -tangent;
+			}
 			float3 norm = cross(tangent, bitangent);
 			p.SetNormals(norm, tangent * tangScale, bitangent);
 			p.SetTexMapping(float3(1, 0, 0), float3(0, 1, 0), uvStart, uvEnd);

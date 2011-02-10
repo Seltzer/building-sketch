@@ -13,6 +13,17 @@ uniform sampler2D normalmap;
 
 void ray_intersect_rm(inout vec3 dp, in vec3 ds);
 
+//  Power function
+float power(float val, int pow)
+{
+	float result = val;
+	for (int i = 0; i < pow-1; ++i)
+	{
+		result = result * val;
+	}
+	return result;
+}
+
 void main()
 {
 	//float bright = dot(normal, vec3(0, 0, 1));
@@ -49,9 +60,9 @@ void main()
 	//vec3 normal = vec3((0.5-normalLookup.ba) * (-depth * 255.0), 1.0);
 	normal = normalize(normal);
 	
-	float ambient = 0.25;
+	float ambient = 0.4;
 	float diffuse = 0.6 * max(0.0, -dot(lightDir, normal));
-	float specular = 0.2 * pow(max(0.0, -dot(normal, halfVec)), 20);
+	float specular = 0.2 * power(max(0.0, -dot(normal, halfVec)), 20);
 	gl_FragColor = vec4(color.xyz * (ambient + diffuse) + specular, 1.0);
 	//gl_FragColor = texture2D(normalmap, pt_eye.xy);
 }
