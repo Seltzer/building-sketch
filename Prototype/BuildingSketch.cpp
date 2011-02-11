@@ -709,7 +709,6 @@ void BuildingSketch::MouseMoved(int2 pos)
 			} else {
 				yaw += (pos.x - dragOrigin.x)*TRACK_SCALE;
 			}
-			printf("pitch: %f, yaw: %f \n", pitch, yaw);
 			dragOrigin = pos;			
 		}
 	}		
