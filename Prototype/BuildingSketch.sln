@@ -1,26 +1,15 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BuildingSketch", "BuildingSketch.vcproj", "{9C31673F-818D-412B-9460-61812AFCBEE1}"
-	ProjectSection(ProjectDependencies) = postProject
-		{FA4620B1-393A-4719-9BB4-3BC8CAA70C4B} = {FA4620B1-393A-4719-9BB4-3BC8CAA70C4B}
-		{0F9CE5F0-4D89-4314-9147-8AAB1B8842ED} = {0F9CE5F0-4D89-4314-9147-8AAB1B8842ED}
-	EndProjectSection
-EndProject
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dependencies", "Dependencies", "{7B229927-988A-44EF-ACB4-70C0407C5514}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sfml-window", "dependencies\SFML\build\vc2008\sfml-window.vcproj", "{0F9CE5F0-4D89-4314-9147-8AAB1B8842ED}"
-	ProjectSection(ProjectDependencies) = postProject
-		{C061A27D-7CA0-4179-9869-672FA04A86A8} = {C061A27D-7CA0-4179-9869-672FA04A86A8}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BuildingSketch", "BuildingSketch.vcxproj", "{9C31673F-818D-412B-9460-61812AFCBEE1}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sfml-graphics", "dependencies\SFML\build\vc2008\sfml-graphics.vcproj", "{FA4620B1-393A-4719-9BB4-3BC8CAA70C4B}"
-	ProjectSection(ProjectDependencies) = postProject
-		{C061A27D-7CA0-4179-9869-672FA04A86A8} = {C061A27D-7CA0-4179-9869-672FA04A86A8}
-		{0F9CE5F0-4D89-4314-9147-8AAB1B8842ED} = {0F9CE5F0-4D89-4314-9147-8AAB1B8842ED}
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sfml-window", "dependencies\SFML\build\vc2008\sfml-window.vcxproj", "{0F9CE5F0-4D89-4314-9147-8AAB1B8842ED}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sfml-system", "dependencies\SFML\build\vc2008\sfml-system.vcproj", "{C061A27D-7CA0-4179-9869-672FA04A86A8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sfml-graphics", "dependencies\SFML\build\vc2008\sfml-graphics.vcxproj", "{FA4620B1-393A-4719-9BB4-3BC8CAA70C4B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sfml-system", "dependencies\SFML\build\vc2008\sfml-system.vcxproj", "{C061A27D-7CA0-4179-9869-672FA04A86A8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

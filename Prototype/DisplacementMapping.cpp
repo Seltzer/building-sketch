@@ -72,7 +72,7 @@ void generateDisplacementMap(Bounds bounds, std::vector<Stroke>& featureStrokes)
 	}
 
 	vectorToImage();
-	displacementMap.SaveToFile("displacement_map.png");
+	//displacementMap.SaveToFile("displacement_map.png");
 }
 
 /* Bresenham's line algorithm */

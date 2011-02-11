@@ -7,6 +7,7 @@
 #include "DisplacementMapping.h"
 #include "Shader.h"
 #include "HeightmapProcessing.h"
+#include "resource.h"
 
 #ifdef _WIN32
 	// Required for ChangeWindowTitle() since SFML doesn't provide a platform-agnostic way
@@ -14,9 +15,6 @@
 #endif
 
 using namespace std;
-
-
-
 
 BuildingSketch::BuildingSketch() 
 	: maxArea(0), los(NULL), symm(NULL), buildingAlgorithm(EXTRUDE), losApplicationPending(false), rotationCount(8), mirrorSketch(false), filled(true), yaw(45), pitch(25), zoom(0), 
@@ -369,6 +367,12 @@ void BuildingSketch::RenderLoop()
 	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), defaultAppString, sf::Style::Resize|sf::Style::Close);
 	win->SetActive(true);
 	win->PreserveOpenGLStates(true);
+
+	// Set the window icons
+	HICON icon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON1));
+        SendMessage((HWND)win->GetWindowHandle(), WM_SETICON, ICON_BIG,   (LPARAM)icon);
+        SendMessage((HWND)win->GetWindowHandle(), WM_SETICON, ICON_SMALL, (LPARAM)icon);
+
 	ChangeWindowTitle(defaultAppString + " - Extrusion Mode");
 
 	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Memory leak
@@ -383,10 +387,8 @@ void BuildingSketch::RenderLoop()
 		while (win->GetEvent(Event))
 			ProcessEvent(Event);
 
-
 		glClearColor((51.0/255.0), (51.0/255.0), (102.0/255.0), 1); //left panel background color
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 
 		glViewport(0, 0, verticalDivision, win->GetHeight());		
 		glMatrixMode(GL_PROJECTION);
@@ -395,7 +397,6 @@ void BuildingSketch::RenderLoop()
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		RenderStrokes();
-
 
 		glViewport(verticalDivision, 0, (win->GetWidth() - verticalDivision), win->GetHeight());
 		glMatrixMode(GL_PROJECTION);
@@ -691,8 +692,6 @@ void BuildingSketch::MouseMoved(int2 pos)
 					pixelsNear[pos.x + x][pos.y + y] = true;
 				}
 			}
-
-
 			break;
 		}
 		case TRACKING:
@@ -703,11 +702,14 @@ void BuildingSketch::MouseMoved(int2 pos)
 			// http://en.wikipedia.org/wiki/Gimbal_lock
 			if (pitch > 360)
 				pitch = 0;
+			if (pitch < 0)
+				pitch = 360;
 			if (pitch >= 90 && pitch < 270) {
-				yaw -= (pos.x - dragOrigin.x)*TRACK_SCALE;
+				yaw -= (pos.x - dragOrigin.x); //*TRACK_SCALE;
 			} else {
 				yaw += (pos.x - dragOrigin.x)*TRACK_SCALE;
 			}
+			printf("pitch: %f, yaw: %f \n", pitch, yaw);
 			dragOrigin = pos;			
 		}
 	}		

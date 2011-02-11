@@ -6,6 +6,7 @@
 
 int main()
 {
+
 	BuildingSketch app;
 	app.RenderLoop();
 	return 0;
