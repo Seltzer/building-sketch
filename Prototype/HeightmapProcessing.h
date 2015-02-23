@@ -29,9 +29,11 @@ inline void setNormal(sf::Uint8* normals, float3 normal, unsigned width, unsigne
 sf::Image heightToNormal(const sf::Image& heightmap, float heightScale = 0.01f)
 {
 	// Is there no way to check if heightmap is loaded?
-	int width = heightmap.GetWidth();
-	int height = heightmap.GetHeight();
-	const sf::Uint8* heightPixels = heightmap.GetPixelsPtr();
+
+	sf::Vector2u heightMapSize = heightmap.getSize();
+	int width = heightMapSize.x;
+	int height = heightMapSize.y;
+	const sf::Uint8* heightPixels = heightmap.getPixelsPtr();
 	//sf::Image normalmap; // SetPixel, like GetPixel performs <i>horribly</i>, so create later
 	sf::Uint8* normals = new sf::Uint8[width * height * 4];
 
@@ -72,7 +74,12 @@ sf::Image heightToNormal(const sf::Image& heightmap, float heightScale = 0.01f)
 		}
 	}
 
-	return sf::Image(width, height, normals);
+	// FIXME
+	//return sf::Image(width, height, normals);
+
+	sf::Image img = sf::Image();
+	img.create(width, height, normals);
+	return img;
 }
 
 

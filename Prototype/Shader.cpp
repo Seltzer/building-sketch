@@ -2,7 +2,8 @@
 
 #include "Shader.h"
 
-#include <SFML/Graphics/GraphicsContext.hpp>
+//#include <SFML/Graphics/GraphicsContext.hpp>
+#include <SFML/OpenGL.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -50,7 +51,8 @@ std::string fileToStr(std::string file)
 
 Shader::Shader(std::string vertFile, std::string fragFile)
 {
-	sf::priv::GraphicsContext ctx; // Make sure glew is initialised
+	// FIXME
+	//sf::priv::GraphicsContext ctx; // Make sure glew is initialised
 
 	std::string vsSource = fileToStr(vertFile); // Keep this in scope until you're done with the raw stringS
 	const char* vsSourceChar = vsSource.c_str();
@@ -86,7 +88,9 @@ void Shader::BindTexture(const sf::Image& image, std::string samplerName, int te
 	int samplerLocation = glGetUniformLocationARB(shaderProgram, samplerName.c_str());
 
 	glActiveTexture(GL_TEXTURE0 + texUnit);
-	image.Bind();
+	
+	// FIXME
+	//image.Bind();
 
 	glUniform1i(samplerLocation, texUnit);
 }

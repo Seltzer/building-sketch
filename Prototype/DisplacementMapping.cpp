@@ -38,7 +38,7 @@ void generateDisplacementMap(Bounds bounds, std::vector<Stroke>& featureStrokes)
 	displacementVector.assign(width, yVector);
 
 	// Set up the displacement image.
-	displacementMap.Create(width, height, white);
+	displacementMap.create(width, height, white);
 	if (featureStrokes.empty()) return;
 	bool outOfBounds;
 	for (int i = 0; i <= featureStrokes.size()-1; i++)
@@ -349,7 +349,7 @@ void vectorToImage()
 	{
 		for (int y = 0; y <= height-1; y++) 
 		{
-			displacementMap.SetPixel(x, height-1-y, displacementVector[x][y].color);
+			displacementMap.setPixel(x, height-1-y, displacementVector[x][y].color);
 		}
 	}
 }

@@ -2,11 +2,11 @@
 #define CONCAVE_H
 
 #include <SFML/Graphics.hpp>
-
 #include "Types.h"
 #include "Poly.h"
 
 
+class GLUtesselator;
 
 
 // Concave polygon tesselator from:

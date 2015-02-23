@@ -1,5 +1,5 @@
 #include <iostream>
-#include <SFML/Graphics/GraphicsContext.hpp>
+#include <SFML/OpenGL.hpp>
 #include "BuildingSketch.h"
 #include "BuildingGeneration.h"
 #include "SketchPreprocessing.h"
@@ -316,7 +316,9 @@ void BuildingSketch::DrawSolid(const Poly poly)
 	if (filled) {
 		glColor3f((249.0/255.0), (249.0/255.0), (240.0/255.0));
 		buildingShader->Enable(true);
-		displacementMap.Bind();
+		
+		// FIXME
+		//displacementMap.bind();
 
 		buildingShader->BindTexture(displacementMap, "reliefmap", 0);
 		buildingShader->BindTexture(normalMap, "normalmap", 1);
@@ -365,43 +367,47 @@ void BuildingSketch::DrawOutline(const Poly poly)
 void BuildingSketch::RenderLoop()
 {
 	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), defaultAppString, sf::Style::Resize|sf::Style::Close);
-	win->SetActive(true);
-	win->PreserveOpenGLStates(true);
+	win->setActive(true);
+	
+	// FIXME
+	//win->PreserveOpenGLStates(true);
 
 	// Set the window icons
 	HICON icon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON1));
-        SendMessage((HWND)win->GetWindowHandle(), WM_SETICON, ICON_BIG,   (LPARAM)icon);
-        SendMessage((HWND)win->GetWindowHandle(), WM_SETICON, ICON_SMALL, (LPARAM)icon);
+        SendMessage((HWND)win->getSystemHandle(), WM_SETICON, ICON_BIG,   (LPARAM)icon);
+		SendMessage((HWND)win->getSystemHandle(), WM_SETICON, ICON_SMALL, (LPARAM)icon);
 
 	ChangeWindowTitle(defaultAppString + " - Extrusion Mode");
 
 	buildingShader = new Shader("displacement.vert", "displacement.frag"); // TODO: Memory leak
 	//displacementMap2.LoadFromFile("collage_height.jpg");
-	displacementMap.Create(32, 32); // Blank map to begin with
+	displacementMap.create(32, 32); // Blank map to begin with
 	normalMap = heightToNormal(displacementMap);
 
-	while (win->IsOpened())
+	while (win->isOpen())
 	{
 		sf::Event Event;
 
-		while (win->GetEvent(Event))
+		while (win->waitEvent(Event))
 			ProcessEvent(Event);
 
 		glClearColor((51.0/255.0), (51.0/255.0), (102.0/255.0), 1); //left panel background color
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glViewport(0, 0, verticalDivision, win->GetHeight());		
+		sf::Vector2u windowSize = win->getSize();
+
+		glViewport(0, 0, verticalDivision, windowSize.y);		
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		glOrtho(0, verticalDivision, win->GetHeight(), 0, -100, 100);
+		glOrtho(0, verticalDivision, windowSize.y, 0, -100, 100);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		RenderStrokes();
 
-		glViewport(verticalDivision, 0, (win->GetWidth() - verticalDivision), win->GetHeight());
+		glViewport(verticalDivision, 0, (windowSize.x - verticalDivision), windowSize.y);
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		gluPerspective(45 + zoom, (float(win->GetWidth())  - verticalDivision) / win->GetHeight(), 10.0f, 10000.0f);
+		gluPerspective(45 + zoom, (float(windowSize.x) - verticalDivision) / windowSize.y, 10.0f, 10000.0f);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();			
 		glEnable(GL_DEPTH_TEST);
@@ -412,9 +418,10 @@ void BuildingSketch::RenderLoop()
 		RenderBuilding();
 		glDisable(GL_DEPTH_TEST);
 
-		win->Display();
+		win->display();
 
-		sf::Sleep(1.0f / 60);
+		// FIXME
+		//sf::Sleep(1.0f / 60);
 	}
 }
 
@@ -428,7 +435,7 @@ void BuildingSketch::ChangeWindowTitle(const string& newTitle)
 {
 	#ifdef _WIN32
 		// Hack to get HWND for SFML win
-		HWND windowHandle = (HWND) win->GetWindowHandle();
+		HWND windowHandle = (HWND) win->getSystemHandle();
 		if (!windowHandle)
 			return;
 
@@ -506,46 +513,46 @@ void BuildingSketch::GenerateSketch(vector<Stroke>& strokes)
 void BuildingSketch::ProcessEvent(sf::Event& Event)
 {
 	// window resized
-	if (Event.Type == sf::Event::Resized)
+	if (Event.type == sf::Event::Resized)
 	{
-		int width = Event.Size.Width;
-		int height = Event.Size.Height;
-		win->SetView(sf::View(sf::FloatRect(0, 0, (float) width, (float) height))); // Not needed?
+		int width = Event.size.width;
+		int height = Event.size.height;
+		win->setView(sf::View(sf::FloatRect(0, 0, (float) width, (float) height))); // Not needed?
 		windowSize = int2(width, height);
 		verticalDivision = width/2;
 	}
 
 	// Window closed
-	if (Event.Type == sf::Event::Closed)
-		win->Close();
+	if (Event.type == sf::Event::Closed)
+		win->close();
 
-	if (Event.Type == sf::Event::KeyPressed)
+	if (Event.type == sf::Event::KeyPressed)
 	{
-		if (Event.Key.Code == sf::Key::Escape)
+		if (Event.key.code == sf::Keyboard::Escape)
 		{
 			if (losApplicationPending)
 				CleanUpSymmetry();
 			else
-				win->Close();
+				win->close();
 		}
-		else if (Event.Key.Code == sf::Key::Left || Event.Key.Code == sf::Key::Right)
+		else if (Event.key.code == sf::Keyboard::Left || Event.key.code == sf::Keyboard::Right)
 			yaw = 0;
-		else if (Event.Key.Code == sf::Key::Up || Event.Key.Code == sf::Key::Down)
+		else if (Event.key.code == sf::Keyboard::Up || Event.key.code == sf::Keyboard::Down)
 			pitch = 0;
 		// Toggle wireframe fill on and off.
-		else if (Event.Key.Code == sf::Key::W)
+		else if (Event.key.code == sf::Keyboard::W)
 			filled = !filled;
 		// Toggle axis on and off.
-		else if (Event.Key.Code == sf::Key::A)
+		else if (Event.key.code == sf::Keyboard::A)
 			showAxis = !showAxis;
 		// Toggle mirror sketch in rotated algorithm.
-		else if (Event.Key.Code == sf::Key::M)
+		else if (Event.key.code == sf::Keyboard::M)
 		{				
 			mirrorSketch = !mirrorSketch;
 			UpdateBuilding();
 		}
 		// Calculate a line of symmetry
-		else if (Event.Key.Code == sf::Key::S)
+		else if (Event.key.code == sf::Keyboard::S)
 		{
 			CleanUpSymmetry();
 
@@ -560,7 +567,7 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 				losApplicationPending = true;
 			}
 		}
-		else if (Event.Key.Code == sf::Key::L)
+		else if (Event.key.code == sf::Keyboard::L)
 		{
 			if (losApplicationPending)
 			{
@@ -568,7 +575,7 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 				GenerateSketch(generated);
 			}
 		}
-		else if (Event.Key.Code == sf::Key::R)
+		else if (Event.key.code == sf::Keyboard::R)
 		{
 			if (losApplicationPending)
 			{
@@ -577,7 +584,7 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 			}
 		}
 		// Increase the rations count for the rotation algorith.
-		else if (Event.Key.Code == sf::Key::Comma)
+		else if (Event.key.code == sf::Keyboard::Comma)
 		{
 			rotationCount--;
 			rotationCount = (rotationCount<1) ? 1 : rotationCount;
@@ -585,14 +592,14 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 			UpdateBuilding();
 		}
 		// Decrease the rations count for the rotation algorith.
-		else if (Event.Key.Code == sf::Key::Period)
+		else if (Event.key.code == sf::Keyboard::Period)
 		{
 			++rotationCount;
 			UpdateWindowTitle();
 			UpdateBuilding();
 		}
 		// Toggle differnt building render algorithms
-		else if (Event.Key.Code == sf::Key::E) {	
+		else if (Event.key.code == sf::Keyboard::E) {
 			switch (buildingAlgorithm) 
 			{
 				case EXTRUDE:
@@ -619,21 +626,21 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 			UpdateWindowTitle();
 			UpdateBuilding();
 		}
-		else if (Event.Key.Code == sf::Key::Space)
+		else if (Event.key.code == sf::Keyboard::Space)
 		{
 			ResetStrokes();
 			UpdateBuilding();
 		}
 	}
 
-	if (Event.Type == sf::Event::MouseMoved)
-		MouseMoved(int2(Event.MouseMove.X, Event.MouseMove.Y));
-	if (Event.Type == sf::Event::MouseButtonPressed && Event.MouseButton.Button == sf::Mouse::Left)
-		MousePressed(int2(Event.MouseButton.X, Event.MouseButton.Y));
-	if (Event.Type == sf::Event::MouseButtonReleased && Event.MouseButton.Button == sf::Mouse::Left)
-		MouseReleased(int2(Event.MouseMove.X, Event.MouseMove.Y));
-	if (Event.Type == sf::Event::MouseWheelMoved)
-		MouseWheelMoved(Event.MouseWheel.Delta);
+	if (Event.type == sf::Event::MouseMoved)
+		MouseMoved(int2(Event.mouseMove.x, Event.mouseMove.y));
+	if (Event.type == sf::Event::MouseButtonPressed && Event.mouseButton.button == sf::Mouse::Left)
+		MousePressed(int2(Event.mouseButton.x, Event.mouseButton.y));
+	if (Event.type == sf::Event::MouseButtonReleased && Event.mouseButton.button == sf::Mouse::Left)
+		MouseReleased(int2(Event.mouseMove.x, Event.mouseMove.y));
+	if (Event.type == sf::Event::MouseWheelMoved)
+		MouseWheelMoved(Event.mouseWheel.delta);
 }
 
 void BuildingSketch::MousePressed(int2 pos)
