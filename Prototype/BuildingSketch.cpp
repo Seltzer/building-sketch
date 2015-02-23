@@ -1,5 +1,8 @@
 #include <iostream>
+#define GLEW_STATIC
+#include <OpenGL/glew.h>
 #include <SFML/OpenGL.hpp>
+
 #include "BuildingSketch.h"
 #include "BuildingGeneration.h"
 #include "SketchPreprocessing.h"

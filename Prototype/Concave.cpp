@@ -1,4 +1,5 @@
 #include <iostream>
+#include <SFML/OpenGL.hpp>
 #include "Concave.h"
 
 static const Poly* currentPoly = NULL;

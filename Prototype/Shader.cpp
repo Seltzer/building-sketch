@@ -1,5 +1,5 @@
-//#include <GL\glew.h>
-
+#define GLEW_STATIC
+#include <OpenGL/glew.h>
 #include "Shader.h"
 
 //#include <SFML/Graphics/GraphicsContext.hpp>
