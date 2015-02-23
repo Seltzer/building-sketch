@@ -23,7 +23,7 @@ BuildingSketch::BuildingSketch()
 	: maxArea(0), los(NULL), symm(NULL), buildingAlgorithm(EXTRUDE), losApplicationPending(false), rotationCount(8), mirrorSketch(false), filled(true), yaw(45), pitch(25), zoom(0), 
 			windowSize(800, 600), mouseAction(NONE), showAxis(true), defaultAppString("Building Sketch")
 {	
-	verticalDivision = windowSize.x/2;
+	verticalDivision = windowSize.x / 2;
 
 	ResetStrokes();
 }
@@ -322,7 +322,6 @@ void BuildingSketch::DrawSolid(const Poly poly)
 		
 		// FIXME
 		//displacementMap.bind();
-
 		buildingShader->BindTexture(displacementMap, "reliefmap", 0);
 		buildingShader->BindTexture(normalMap, "normalmap", 1);
 
@@ -369,10 +368,14 @@ void BuildingSketch::DrawOutline(const Poly poly)
 
 void BuildingSketch::RenderLoop()
 {
-	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), defaultAppString, sf::Style::Resize|sf::Style::Close);
+	// Request a 32-bits depth buffer when creating the window
+	sf::ContextSettings contextSettings;
+	contextSettings.depthBits = 32;
+
+	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), defaultAppString.c_str(), sf::Style::Resize | sf::Style::Close, contextSettings);
 	win->setActive(true);
 	
-	// FIXME
+	//// FIXME
 	//win->PreserveOpenGLStates(true);
 
 	// Set the window icons
@@ -391,8 +394,17 @@ void BuildingSketch::RenderLoop()
 	{
 		sf::Event Event;
 
-		while (win->waitEvent(Event))
+
+		//std::cout << "hello" << std::endl;
+		//
+		//while (win->waitEvent(Event))
+		//	ProcessEvent(Event);
+
+		while (win->pollEvent(Event))
 			ProcessEvent(Event);
+
+		//std::cout << "goodbye" << std::endl;
+
 
 		glClearColor((51.0/255.0), (51.0/255.0), (102.0/255.0), 1); //left panel background color
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -422,9 +434,8 @@ void BuildingSketch::RenderLoop()
 		glDisable(GL_DEPTH_TEST);
 
 		win->display();
-
-		// FIXME
-		//sf::Sleep(1.0f / 60);
+		
+		sf::sleep(sf::seconds(1.0f / 60));
 	}
 }
 

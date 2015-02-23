@@ -34,6 +34,7 @@ void printLog(GLuint obj)
 		std::cout << infoLog;
 }
 
+
 std::string fileToStr(std::string file)
 {
 	std::ifstream textstream(file.c_str());
@@ -51,8 +52,7 @@ std::string fileToStr(std::string file)
 
 Shader::Shader(std::string vertFile, std::string fragFile)
 {
-	// FIXME
-	//sf::priv::GraphicsContext ctx; // Make sure glew is initialised
+	glewInit();
 
 	std::string vsSource = fileToStr(vertFile); // Keep this in scope until you're done with the raw stringS
 	const char* vsSourceChar = vsSource.c_str();
@@ -91,6 +91,7 @@ void Shader::BindTexture(const sf::Image& image, std::string samplerName, int te
 	
 	// FIXME
 	//image.Bind();
+	
 
 	glUniform1i(samplerLocation, texUnit);
 }

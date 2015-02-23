@@ -3,11 +3,12 @@
 
 #include "Types.h"
 #include "BuildingSketch.h"
+#include <iostream>
 
 int main()
 {
-
 	BuildingSketch app;
 	app.RenderLoop();
+	
 	return 0;
 }

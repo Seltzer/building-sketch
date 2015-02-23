@@ -74,9 +74,6 @@ sf::Image heightToNormal(const sf::Image& heightmap, float heightScale = 0.01f)
 		}
 	}
 
-	// FIXME
-	//return sf::Image(width, height, normals);
-
 	sf::Image img = sf::Image();
 	img.create(width, height, normals);
 	return img;
