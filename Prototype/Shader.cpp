@@ -1,14 +1,12 @@
 #define GLEW_STATIC
 #include <OpenGL/glew.h>
-#include "Shader.h"
-
-//#include <SFML/Graphics/GraphicsContext.hpp>
 #include <SFML/OpenGL.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include "Shader.h"
 
 // Shader stuff done with assistance of http://gpwiki.org/index.php/OpenGL:Codes:Simple_GLSL_example
 
