@@ -374,7 +374,7 @@ void BuildingSketch::RenderLoop()
 	win = new sf::RenderWindow(sf::VideoMode(windowSize.x, windowSize.y, 32), defaultAppString.c_str(), sf::Style::Resize | sf::Style::Close, contextSettings);
 	win->setActive(true);
 	
-	//// FIXME
+	// FIXME
 	//win->PreserveOpenGLStates(true);
 
 	// Set the window icons
@@ -393,17 +393,8 @@ void BuildingSketch::RenderLoop()
 	{
 		sf::Event Event;
 
-
-		//std::cout << "hello" << std::endl;
-		//
-		//while (win->waitEvent(Event))
-		//	ProcessEvent(Event);
-
 		while (win->pollEvent(Event))
 			ProcessEvent(Event);
-
-		//std::cout << "goodbye" << std::endl;
-
 
 		glClearColor((51.0/255.0), (51.0/255.0), (102.0/255.0), 1); //left panel background color
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -523,49 +514,49 @@ void BuildingSketch::GenerateSketch(vector<Stroke>& strokes)
 
 
 //////////////////////////////////////////////////// Events
-void BuildingSketch::ProcessEvent(sf::Event& Event)
+void BuildingSketch::ProcessEvent(sf::Event& event)
 {
 	// window resized
-	if (Event.type == sf::Event::Resized)
+	if (event.type == sf::Event::Resized)
 	{
-		int width = Event.size.width;
-		int height = Event.size.height;
+		int width = event.size.width;
+		int height = event.size.height;
 		win->setView(sf::View(sf::FloatRect(0, 0, (float) width, (float) height))); // Not needed?
 		windowSize = int2(width, height);
 		verticalDivision = width/2;
 	}
 
 	// Window closed
-	if (Event.type == sf::Event::Closed)
+	if (event.type == sf::Event::Closed)
 		win->close();
 
-	if (Event.type == sf::Event::KeyPressed)
+	if (event.type == sf::Event::KeyPressed)
 	{
-		if (Event.key.code == sf::Keyboard::Escape)
+		if (event.key.code == sf::Keyboard::Escape)
 		{
 			if (losApplicationPending)
 				CleanUpSymmetry();
 			else
 				win->close();
 		}
-		else if (Event.key.code == sf::Keyboard::Left || Event.key.code == sf::Keyboard::Right)
+		else if (event.key.code == sf::Keyboard::Left || event.key.code == sf::Keyboard::Right)
 			yaw = 0;
-		else if (Event.key.code == sf::Keyboard::Up || Event.key.code == sf::Keyboard::Down)
+		else if (event.key.code == sf::Keyboard::Up || event.key.code == sf::Keyboard::Down)
 			pitch = 0;
 		// Toggle wireframe fill on and off.
-		else if (Event.key.code == sf::Keyboard::W)
+		else if (event.key.code == sf::Keyboard::W)
 			filled = !filled;
 		// Toggle axis on and off.
-		else if (Event.key.code == sf::Keyboard::A)
+		else if (event.key.code == sf::Keyboard::A)
 			showAxis = !showAxis;
 		// Toggle mirror sketch in rotated algorithm.
-		else if (Event.key.code == sf::Keyboard::M)
+		else if (event.key.code == sf::Keyboard::M)
 		{				
 			mirrorSketch = !mirrorSketch;
 			UpdateBuilding();
 		}
 		// Calculate a line of symmetry
-		else if (Event.key.code == sf::Keyboard::S)
+		else if (event.key.code == sf::Keyboard::S)
 		{
 			CleanUpSymmetry();
 
@@ -580,7 +571,7 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 				losApplicationPending = true;
 			}
 		}
-		else if (Event.key.code == sf::Keyboard::L)
+		else if (event.key.code == sf::Keyboard::L)
 		{
 			if (losApplicationPending)
 			{
@@ -588,7 +579,7 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 				GenerateSketch(generated);
 			}
 		}
-		else if (Event.key.code == sf::Keyboard::R)
+		else if (event.key.code == sf::Keyboard::R)
 		{
 			if (losApplicationPending)
 			{
@@ -597,7 +588,7 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 			}
 		}
 		// Increase the rations count for the rotation algorith.
-		else if (Event.key.code == sf::Keyboard::Comma)
+		else if (event.key.code == sf::Keyboard::Comma)
 		{
 			rotationCount--;
 			rotationCount = (rotationCount<1) ? 1 : rotationCount;
@@ -605,14 +596,14 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 			UpdateBuilding();
 		}
 		// Decrease the rations count for the rotation algorith.
-		else if (Event.key.code == sf::Keyboard::Period)
+		else if (event.key.code == sf::Keyboard::Period)
 		{
 			++rotationCount;
 			UpdateWindowTitle();
 			UpdateBuilding();
 		}
 		// Toggle differnt building render algorithms
-		else if (Event.key.code == sf::Keyboard::E) {
+		else if (event.key.code == sf::Keyboard::E) {
 			switch (buildingAlgorithm) 
 			{
 				case EXTRUDE:
@@ -639,21 +630,21 @@ void BuildingSketch::ProcessEvent(sf::Event& Event)
 			UpdateWindowTitle();
 			UpdateBuilding();
 		}
-		else if (Event.key.code == sf::Keyboard::Space)
+		else if (event.key.code == sf::Keyboard::Space)
 		{
 			ResetStrokes();
 			UpdateBuilding();
 		}
 	}
 
-	if (Event.type == sf::Event::MouseMoved)
-		MouseMoved(int2(Event.mouseMove.x, Event.mouseMove.y));
-	if (Event.type == sf::Event::MouseButtonPressed && Event.mouseButton.button == sf::Mouse::Left)
-		MousePressed(int2(Event.mouseButton.x, Event.mouseButton.y));
-	if (Event.type == sf::Event::MouseButtonReleased && Event.mouseButton.button == sf::Mouse::Left)
-		MouseReleased(int2(Event.mouseMove.x, Event.mouseMove.y));
-	if (Event.type == sf::Event::MouseWheelMoved)
-		MouseWheelMoved(Event.mouseWheel.delta);
+	if (event.type == sf::Event::MouseMoved)
+		MouseMoved(int2(event.mouseMove.x, event.mouseMove.y));
+	if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+		MousePressed(int2(event.mouseButton.x, event.mouseButton.y));
+	if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left)
+		MouseReleased(int2(event.mouseMove.x, event.mouseMove.y));
+	if (event.type == sf::Event::MouseWheelMoved)
+		MouseWheelMoved(event.mouseWheel.delta);
 }
 
 void BuildingSketch::MousePressed(int2 pos)
